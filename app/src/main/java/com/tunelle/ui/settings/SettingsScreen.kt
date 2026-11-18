@@ -1786,7 +1786,7 @@ private fun settingsSections(
         ),
         Section(
             "Advanced",
-            listOf(
+            listOfNotNull(
                 Entry("What's new", "release notes changelog version highlights") {
                     NavRow("What's new", { showWhatsNew = true }, summary = com.tunelle.i18n.Tr.f("Highlights and improvements in {0}", BuildConfig.VERSION_NAME), icon = Icons.Rounded.SystemUpdate)
                 },

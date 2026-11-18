@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.tunelle"
     // InnerTubeX's AAR is compiled against 37; targetSdk (runtime behaviour) stays 36.
-    compileSdk = 37
+    compileSdkVersion = "android-37.0"
 
     defaultConfig {
         applicationId = "com.tunelle"
