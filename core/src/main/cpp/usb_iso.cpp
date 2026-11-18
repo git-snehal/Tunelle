@@ -1,4 +1,4 @@
-// OpenTune's own USB Audio Class output: the app streams PCM to a USB DAC
+// Tunelle's own USB Audio Class output: the app streams PCM to a USB DAC
 // itself, through the device's usbfs file (from Android's UsbDeviceConnection),
 // rather than through Android's audio system. The DAC gets the track's own
 // sample rate and bit depth, nothing mixed or resampled, and plays it bit for
@@ -34,7 +34,7 @@
 #include <thread>
 #include <vector>
 
-#define TAG "OpenTuneUsb"
+#define TAG "TunelleUsb"
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 
@@ -282,7 +282,7 @@ struct Stream {
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_usbOpen(JNIEnv*, jclass, jint fd, jint endpoint, jint feedbackEndpoint, jint maxPacket,
+Java_com_tunelle_playback_nativeout_NativeAudio_usbOpen(JNIEnv*, jclass, jint fd, jint endpoint, jint feedbackEndpoint, jint maxPacket,
                                                          jint feedbackPacket, jboolean highSpeed, jint packetsPerMs, jint frameBytes,
                                                          jint rate, jint ringMs) {
     if (fd < 0 || frameBytes <= 0 || rate <= 0 || packetsPerMs <= 0) return 0;
@@ -299,7 +299,7 @@ Java_com_opentune_playback_nativeout_NativeAudio_usbOpen(JNIEnv*, jclass, jint f
 
 /** Copies what fits of [frames] frames from [buffer]; returns the frames taken. */
 JNIEXPORT jint JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_usbWrite(JNIEnv* env, jclass, jlong handle, jobject buffer, jint offset, jint frames) {
+Java_com_tunelle_playback_nativeout_NativeAudio_usbWrite(JNIEnv* env, jclass, jlong handle, jobject buffer, jint offset, jint frames) {
     auto* s = reinterpret_cast<Stream*>(handle);
     auto* data = static_cast<uint8_t*>(env->GetDirectBufferAddress(buffer));
     if (data == nullptr || !s->running.load()) return -1;
@@ -310,18 +310,18 @@ Java_com_opentune_playback_nativeout_NativeAudio_usbWrite(JNIEnv* env, jclass, j
 }
 
 JNIEXPORT void JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_usbPlay(JNIEnv*, jclass, jlong handle, jboolean on) {
+Java_com_tunelle_playback_nativeout_NativeAudio_usbPlay(JNIEnv*, jclass, jlong handle, jboolean on) {
     reinterpret_cast<Stream*>(handle)->playing.store(on, std::memory_order_release);
 }
 
 JNIEXPORT void JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_usbFlush(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_usbFlush(JNIEnv*, jclass, jlong handle) {
     reinterpret_cast<Stream*>(handle)->ring.clear();
 }
 
 /** Frames played, frames waiting, underruns, and whether it's still streaming (1) or failed (0). */
 JNIEXPORT jlongArray JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_usbState(JNIEnv* env, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_usbState(JNIEnv* env, jclass, jlong handle) {
     auto* s = reinterpret_cast<Stream*>(handle);
     jlong v[4] = {s->framesPlayed.load(), static_cast<jlong>(s->ring.readable() / s->frameBytes), s->underruns.load(), s->running.load() ? 1 : 0};
     jlongArray out = env->NewLongArray(4);
@@ -330,7 +330,7 @@ Java_com_opentune_playback_nativeout_NativeAudio_usbState(JNIEnv* env, jclass, j
 }
 
 JNIEXPORT void JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_usbClose(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_usbClose(JNIEnv*, jclass, jlong handle) {
     auto* s = reinterpret_cast<Stream*>(handle);
     s->stop();
     delete s;

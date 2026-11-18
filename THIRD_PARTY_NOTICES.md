@@ -1,8 +1,18 @@
 # Third-party notices
 
-OpenTune is licensed under the GNU General Public License v3.0 (see
-[LICENSE](LICENSE)). It includes or uses the following code, libraries,
-fonts and data, under their own licences.
+Tunelle is licensed under the GNU General Public License v3.0 (see
+[LICENSE](LICENSE)).
+
+Tunelle is a modified version of [OpenTune](https://github.com/justshivv/Opentune)
+by justshivv and aerluc and the OpenTune contributors, used under GPLv3.
+Tunelle renames the app and its packages (`com.opentune` → `com.tunelle`),
+removes Discord, usage counting and the services that relied on OpenTune's
+own servers, and continues from there. The notices below are OpenTune's and
+still apply to the code Tunelle inherits; where they say "OpenTune" they
+refer to that original project.
+
+OpenTune includes or uses the following code, libraries, fonts and data,
+under their own licences.
 
 The optional Echo motion effects are adapted from [Echo Music](https://github.com/EchoMusicApp/Echo-Music/tree/a31a72bd958f7cdc128db17d2ea6ae90c3489aa1),
 by the Echo Music contributors, under GPLv3. The sources are

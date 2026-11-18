@@ -1,8 +1,8 @@
-// The phone's translation table (core's com.opentune.i18n.Tr), which loads its
+// The phone's translation table (core's com.tunelle.i18n.Tr), which loads its
 // languages through Android resources. The desktop is in English, so a label is
 // itself and only the {0}, {1}… placeholders are filled, the same way the phone
 // fills them. See Downloads.kt for why this file sits here.
-package com.opentune.i18n
+package com.tunelle.i18n
 
 object Tr {
     fun t(english: String): String = english

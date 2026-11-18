@@ -5,7 +5,7 @@ plugins {
 }
 
 /*
- * OpenTune for Android TV and Google TV: an app of its own, made for a remote
+ * Tunelle for Android TV and Google TV: an app of its own, made for a remote
  * and a screen across the room, on the same :core as the phone, watch and
  * desktop apps. Its version is the phone app's, read from app/build.gradle.kts.
  */
@@ -14,11 +14,11 @@ val appVersionName = Regex("""versionName = "([^"]+)"""").find(appBuild)!!.group
 val appVersionCode = Regex("""versionCode = (\d+)""").find(appBuild)!!.groupValues[1].toInt()
 
 android {
-    namespace = "com.opentune.tv"
+    namespace = "com.tunelle.tv"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.opentune.tv"
+        applicationId = "com.tunelle.tv"
         // Android 8.0, the same floor as :core.
         minSdk = 26
         targetSdk = 36
@@ -28,14 +28,14 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
-    val releaseKeystore = System.getenv("OPENTUNE_KEYSTORE")?.let(::file)?.takeIf { it.exists() }
+    val releaseKeystore = System.getenv("TUNELLE_KEYSTORE")?.let(::file)?.takeIf { it.exists() }
     signingConfigs {
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = releaseKeystore
-                storePassword = System.getenv("OPENTUNE_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("OPENTUNE_KEY_ALIAS")
-                keyPassword = System.getenv("OPENTUNE_KEY_PASSWORD")
+                storePassword = System.getenv("TUNELLE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("TUNELLE_KEY_ALIAS")
+                keyPassword = System.getenv("TUNELLE_KEY_PASSWORD")
             }
         }
     }
