@@ -1,5 +1,5 @@
 // An exclusive AAudio output stream: the phone's own DAC (headphone or line
-// output) opened by OpenTune alone, at the track's own sample rate and format,
+// output) opened by Tunelle alone, at the track's own sample rate and format,
 // so nothing is mixed or resampled on the way. A device may refuse exclusive
 // use; the stream then comes back shared, and Kotlin is told which it got.
 
@@ -9,7 +9,7 @@
 #include <jni.h>
 #include <time.h>
 
-#define TAG "OpenTuneAAudio"
+#define TAG "TunelleAAudio"
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
 
 namespace {
@@ -32,7 +32,7 @@ constexpr int32_t kContentMusic = 2;       // AAUDIO_CONTENT_TYPE_MUSIC
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioOpen(JNIEnv*, jclass, jint rate, jint channels, jint format,
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioOpen(JNIEnv*, jclass, jint rate, jint channels, jint format,
                                                             jint deviceId, jboolean exclusive) {
     AAudioStreamBuilder* builder = nullptr;
     if (AAudio_createStreamBuilder(&builder) != AAUDIO_OK) return 0;
@@ -60,7 +60,7 @@ Java_com_opentune_playback_nativeout_NativeAudio_aaudioOpen(JNIEnv*, jclass, jin
 
 /** What was opened: sharing mode, format, rate, channels, buffer frames, device id. */
 JNIEXPORT jintArray JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioInfo(JNIEnv* env, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioInfo(JNIEnv* env, jclass, jlong handle) {
     auto* s = reinterpret_cast<AAudioStream*>(handle);
     jint v[6] = {
         AAudioStream_getSharingMode(s), AAudioStream_getFormat(s), AAudioStream_getSampleRate(s),
@@ -72,7 +72,7 @@ Java_com_opentune_playback_nativeout_NativeAudio_aaudioInfo(JNIEnv* env, jclass,
 }
 
 JNIEXPORT jint JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioWrite(JNIEnv* env, jclass, jlong handle, jobject buffer, jint offset,
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioWrite(JNIEnv* env, jclass, jlong handle, jobject buffer, jint offset,
                                                              jint frames, jlong timeoutNanos) {
     auto* s = reinterpret_cast<AAudioStream*>(handle);
     auto* data = static_cast<uint8_t*>(env->GetDirectBufferAddress(buffer));
@@ -81,33 +81,33 @@ Java_com_opentune_playback_nativeout_NativeAudio_aaudioWrite(JNIEnv* env, jclass
 }
 
 JNIEXPORT jint JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioStart(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioStart(JNIEnv*, jclass, jlong handle) {
     return AAudioStream_requestStart(reinterpret_cast<AAudioStream*>(handle));
 }
 
 JNIEXPORT jint JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioPause(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioPause(JNIEnv*, jclass, jlong handle) {
     return AAudioStream_requestPause(reinterpret_cast<AAudioStream*>(handle));
 }
 
 JNIEXPORT jint JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioFlush(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioFlush(JNIEnv*, jclass, jlong handle) {
     return AAudioStream_requestFlush(reinterpret_cast<AAudioStream*>(handle));
 }
 
 JNIEXPORT jint JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioStop(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioStop(JNIEnv*, jclass, jlong handle) {
     return AAudioStream_requestStop(reinterpret_cast<AAudioStream*>(handle));
 }
 
 JNIEXPORT void JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioClose(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioClose(JNIEnv*, jclass, jlong handle) {
     AAudioStream_close(reinterpret_cast<AAudioStream*>(handle));
 }
 
 /** Frames heard so far: from the stream's timestamp when it has one, else frames read out of it. */
 JNIEXPORT jlong JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioFramesPlayed(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioFramesPlayed(JNIEnv*, jclass, jlong handle) {
     auto* s = reinterpret_cast<AAudioStream*>(handle);
     int64_t frames = 0, nanos = 0;
     if (AAudioStream_getTimestamp(s, CLOCK_MONOTONIC, &frames, &nanos) == AAUDIO_OK) {
@@ -124,7 +124,7 @@ Java_com_opentune_playback_nativeout_NativeAudio_aaudioFramesPlayed(JNIEnv*, jcl
 }
 
 JNIEXPORT jint JNICALL
-Java_com_opentune_playback_nativeout_NativeAudio_aaudioXRuns(JNIEnv*, jclass, jlong handle) {
+Java_com_tunelle_playback_nativeout_NativeAudio_aaudioXRuns(JNIEnv*, jclass, jlong handle) {
     return AAudioStream_getXRunCount(reinterpret_cast<AAudioStream*>(handle));
 }
 

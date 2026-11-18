@@ -16,7 +16,7 @@ val appBuild = rootProject.file("app/build.gradle.kts").readText()
 val appVersionName = Regex("""versionName = "([^"]+)"""").find(appBuild)!!.groupValues[1]
 val appVersionCode = Regex("""versionCode = (\d+)""").find(appBuild)!!.groupValues[1]
 
-// Registered OpenTune application credentials are supplied by the build owner.
+// Registered Tunelle application credentials are supplied by the build owner.
 // Last.fm mobile authentication requires these; listeners only enter their login.
 fun lastFmCredential(name: String): String {
     val value = providers.environmentVariable(name).orNull.orEmpty().trim()
@@ -25,7 +25,7 @@ fun lastFmCredential(name: String): String {
 }
 
 android {
-    namespace = "com.opentune.core"
+    namespace = "com.tunelle.core"
     ndkVersion = "27.2.12479018"
     externalNativeBuild {
         cmake {
@@ -37,17 +37,12 @@ android {
 
     defaultConfig {
         minSdk = 26
-        // OpenTune's own bit-perfect outputs (src/main/cpp): the USB driver and exclusive AAudio.
+        // Tunelle's own bit-perfect outputs (src/main/cpp): the USB driver and exclusive AAudio.
         externalNativeBuild { cmake { cppFlags += "-std=c++17" } }
         buildConfigField("String", "VERSION_NAME", "\"$appVersionName\"")
         buildConfigField("int", "VERSION_CODE", appVersionCode)
         buildConfigField("String", "LASTFM_API_KEY", lastFmCredential("LASTFM_API_KEY"))
         buildConfigField("String", "LASTFM_API_SECRET", lastFmCredential("LASTFM_API_SECRET"))
-        // OpenTune's Discord application (named "OpenTune"), which heads the phone's Discord card.
-        buildConfigField("String", "DISCORD_APP_ID", providers.environmentVariable("DISCORD_APP_ID").orNull.orEmpty().trim().let { id ->
-            require(id.isEmpty() || id.matches(Regex("[0-9]{17,20}"))) { "DISCORD_APP_ID must be a Discord application id" }
-            "\"$id\""
-        })
         consumerProguardFiles("consumer-rules.pro")
     }
     compileOptions {

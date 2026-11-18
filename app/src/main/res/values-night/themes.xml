@@ -1,3 +1,3 @@
 <resources>
-    <style name="Theme.OpenTune" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.Tunelle" parent="android:Theme.Material.NoActionBar" />
 </resources>

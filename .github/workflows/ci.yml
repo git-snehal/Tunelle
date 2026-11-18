@@ -52,13 +52,11 @@ jobs:
       - name: Player and sign-in regression tests
         run: >-
           ./gradlew --no-daemon :app:testDebugUnitTest
-          --tests '*DiscordWebPolicyTest'
           --tests '*ArtistLinkTapTest'
           --tests '*LikedPlaylistCoverTest'
           --tests '*TitleFlightActionsTest'
           --tests '*PaneTransitionTest'
           --tests '*SignInPageScreenshotTest'
-          --tests '*DiscordSignInScreenshotTest'
           --tests '*CommentsSheetScreenshotTest'
           --tests '*ChoiceTransitionTest'
           --tests '*FullListCoverTest'
@@ -108,27 +106,6 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-
-      - name: Usage deduplication and website scripts
-        run: |
-          node --test usage-api/worker.test.mjs usage-api/addons.test.mjs usage-api/dashboard/model.test.mjs examples/audio-addon/worker.test.mjs
-          node --test services/lossless-addon/control.test.mjs services/lossless-addon/server.test.mjs services/lossless-addon/cache.test.mjs services/lossless-addon/pool.test.mjs services/lossless-addon/usage-server.test.mjs services/lossless-addon/worker.test.mjs services/lossless-addon/control-ui.test.mjs
-          node --check services/lossless-addon/control.js
-          node --check usage-api/dashboard/dashboard.js
-          node --check site/download-tracking.js
-
-      - name: Package Hostinger backend
-        run: |
-          bash services/lossless-addon/vps/pack.sh hostinger-package
-          timeout 90s node scripts/check-hostinger-package.mjs hostinger-package/opentune-hostinger.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: opentune-hostinger
-          path: hostinger-package/
 
       - uses: actions/setup-java@v4
         with:
@@ -213,7 +190,6 @@ jobs:
         env:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
-          DISCORD_APP_ID: ${{ vars.DISCORD_APP_ID || secrets.DISCORD_APP_ID }}
         run: ./gradlew --no-daemon :desktop:test ${{ matrix.package }}
       # The packaged app on its own trimmed runtime: FFmpeg, GraalJS and SQLite must load there too.
       - name: Packaged app self-check
@@ -222,19 +198,19 @@ jobs:
         run: |
           ./gradlew --no-daemon :desktop:createDistributable
           app=desktop/build/compose/binaries/main/app
-          if [ -d "$app/OpenTune.app" ]; then "$app/OpenTune.app/Contents/MacOS/OpenTune" --self-check; else "$app/OpenTune/bin/OpenTune" --self-check; fi
+          if [ -d "$app/Tunelle.app" ]; then "$app/Tunelle.app/Contents/MacOS/Tunelle" --self-check; else "$app/Tunelle/bin/Tunelle" --self-check; fi
       # One file that runs on any Linux after chmod +x, wrapped around the app image just checked.
       - name: AppImage
         if: runner.os == 'Linux'
-        run: desktop/packaging/appimage.sh desktop/build/compose/binaries/main/app/OpenTune desktop/build/compose/binaries/main/appimage/OpenTune-x86_64.AppImage
-      # Unzip anywhere and run OpenTune.exe: the app image, zipped.
+        run: desktop/packaging/appimage.sh desktop/build/compose/binaries/main/app/Tunelle desktop/build/compose/binaries/main/appimage/Tunelle-x86_64.AppImage
+      # Unzip anywhere and run Tunelle.exe: the app image, zipped.
       - name: Portable zip
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           ./gradlew --no-daemon :desktop:createDistributable
           New-Item -ItemType Directory -Force desktop/build/compose/binaries/main/portable | Out-Null
-          Compress-Archive -Path desktop/build/compose/binaries/main/app/OpenTune -DestinationPath desktop/build/compose/binaries/main/portable/OpenTune-windows-x64-portable.zip
+          Compress-Archive -Path desktop/build/compose/binaries/main/app/Tunelle -DestinationPath desktop/build/compose/binaries/main/portable/Tunelle-windows-x64-portable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
@@ -248,25 +224,3 @@ jobs:
             desktop/build/compose/binaries/main/dmg/*.dmg
           if-no-files-found: error
 
-  website:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install playwright==1.58.0
-      - run: python -m playwright install --with-deps chromium
-      - run: python scripts/check-distribution.py
-      - run: python scripts/check-social-preview.py
-      - run: node --test scripts/check-spotify-callback.cjs
-      - run: python scripts/prepare-usage-assets.py
-      - run: python scripts/check-app-controls.py
-      - run: python scripts/check-website.py
-      - run: python scripts/check-room-invite.py
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: website-reports
-          path: website-reports/

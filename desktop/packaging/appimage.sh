@@ -13,29 +13,29 @@ here=$(cd "$(dirname "$0")" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-appdir="$work/OpenTune.AppDir"
+appdir="$work/Tunelle.AppDir"
 mkdir -p "$appdir"
-cp -a "$app" "$appdir/opentune"
+cp -a "$app" "$appdir/tunelle"
 
 cat > "$appdir/AppRun" <<'EOF'
 #!/bin/sh
 here=$(dirname "$(readlink -f "$0")")
-exec "$here/opentune/bin/OpenTune" "$@"
+exec "$here/tunelle/bin/Tunelle" "$@"
 EOF
 chmod +x "$appdir/AppRun"
 
-cat > "$appdir/opentune.desktop" <<'EOF'
+cat > "$appdir/tunelle.desktop" <<'EOF'
 [Desktop Entry]
 Type=Application
-Name=OpenTune
+Name=Tunelle
 Comment=A music player for YouTube Music
-Exec=OpenTune
-Icon=opentune
+Exec=Tunelle
+Icon=tunelle
 Categories=AudioVideo;Audio;Player;
 Terminal=false
 EOF
-cp "$here/icons/AppIcon.png" "$appdir/opentune.png"
-ln -s opentune.png "$appdir/.DirIcon"
+cp "$here/icons/AppIcon.png" "$appdir/tunelle.png"
+ln -s tunelle.png "$appdir/.DirIcon"
 
 tool="${APPIMAGETOOL:-$work/appimagetool}"
 if [ ! -x "$tool" ]; then

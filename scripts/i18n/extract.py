@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Finds the words OpenTune shows, for translating.
+Finds the words Tunelle shows, for translating.
 
     python3 scripts/i18n/extract.py            # writes scripts/i18n/keys.json, prints a summary
     python3 scripts/i18n/extract.py missing hi # the keys Hindi has no translation for yet
 
 A key is a text's English wording exactly as the app shows it: a plain string in the code,
-or the template of a com.opentune.i18n.Tr.f call ("{0} songs"). Translations go in
+or the template of a com.tunelle.i18n.Tr.f call ("{0} songs"). Translations go in
 core/src/main/assets/i18n/<tag>.json, an object from key to translation; a key left out
 shows in English. Code that only builds keys, logs or talks to services is skipped.
 """
@@ -22,7 +22,7 @@ SKIPLINE = re.compile(r'\b(Log\.[dwiev]|AppLog\.|DebugLog\.|TrackLog\.|println|R
                       r'const val TAG|getString\(|optString|optJSONObject|optJSONArray|getJSONObject|getJSONArray|\.put\("|'
                       r'header\(|addHeader|setHeader|Uri\.parse|navigate\(|composable\(|page\(")')
 # Parts of the code that never put words on the screen.
-SKIPDIRS = tuple('core/src/main/java/com/opentune/' + d for d in (
+SKIPDIRS = tuple('core/src/main/java/com/tunelle/' + d for d in (
     'data/innertube/potoken/', 'cast/Dlna.kt', 'cast/CastServer.kt', 'data/innertube/PlayerClient.kt', 'data/spotify/PlaylistCsv.kt',
     'data/Usage.kt', 'data/AppLog.kt', 'data/together/Schnorr.kt', 'i18n/', 'data/Http.kt',
 ))

@@ -6,16 +6,16 @@ plugins {
 }
 
 android {
-    namespace = "com.opentune"
+    namespace = "com.tunelle"
     // InnerTubeX's AAR is compiled against 37; targetSdk (runtime behaviour) stays 36.
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.opentune"
+        applicationId = "com.tunelle"
         minSdk = 26
         targetSdk = 36
-        versionCode = 47
-        versionName = "1.1.0"
+        versionCode = 1
+        versionName = "0.1.0"
         // This version's store changelog, shown as What's new when a release
         // goes out before the app's own notes for it are written.
         val changelog = rootProject.file("fastlane/metadata/android/en-US/changelogs/$versionCode.txt")
@@ -28,14 +28,14 @@ android {
     // A release key from the environment (CI secrets) when there is one;
     // otherwise release builds are signed with the debug key so they still
     // install. See .github/workflows/release.yml.
-    val releaseKeystore = System.getenv("OPENTUNE_KEYSTORE")?.let(::file)?.takeIf { it.exists() }
+    val releaseKeystore = System.getenv("TUNELLE_KEYSTORE")?.let(::file)?.takeIf { it.exists() }
     signingConfigs {
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = releaseKeystore
-                storePassword = System.getenv("OPENTUNE_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("OPENTUNE_KEY_ALIAS")
-                keyPassword = System.getenv("OPENTUNE_KEY_PASSWORD")
+                storePassword = System.getenv("TUNELLE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("TUNELLE_KEY_ALIAS")
+                keyPassword = System.getenv("TUNELLE_KEY_PASSWORD")
             }
         }
     }
