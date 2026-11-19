@@ -127,7 +127,7 @@ enum class PlayerStyle(val label: String, val summary: String) {
 
 @Serializable
 enum class AppFont(val label: String) {
-    SPACE_GROTESK("Space Grotesk"), SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
+    GEIST("Geist"), SPACE_GROTESK("Space Grotesk"), SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
 }
 
 /**
@@ -136,15 +136,18 @@ enum class AppFont(val label: String) {
  */
 @Serializable
 enum class AppStyle(val label: String, val summary: String) {
-    SIGNAL("Signal", "Black, white and one ember accent, with dot-matrix titles"),
+    SIGNAL("Signal", "Calm black and white, one ember accent, arch-shaped covers and dot-matrix numbers"),
     SOFT("Soft", "Warm pastels, round corners and friendly type"),
     VIVID("Vivid", "Bold colour everywhere, taken from what's playing"),
     CUSTOM("Custom", "Your own mix of accent, font, corners and titles"),
 }
 
-/** The face big titles and numbers are set in. */
+/**
+ * Signal details: dot-matrix numbers (the date, song times), small mono labels over
+ * sections and arch-shaped covers; plain keeps numbers, labels and covers ordinary.
+ */
 @Serializable
-enum class TitleFont(val label: String) { DOT_MATRIX("Dot matrix"), SAME("Same as text") }
+enum class TitleFont(val label: String) { DOT_MATRIX("Signal details"), SAME("Plain") }
 
 /** How round cards, sheets and buttons are. */
 @Serializable
@@ -165,8 +168,8 @@ private const val SOFT_PEACH = 0xFFF2A07B.toInt()
  */
 fun ThemeSettings.effective(): ThemeSettings = when (style) {
     AppStyle.SIGNAL -> copy(
-        seedColor = EMBER, paletteStyle = PaletteStyleOption.TonalSpot, font = AppFont.SPACE_GROTESK,
-        titleFont = TitleFont.DOT_MATRIX, corners = CornerStyle.CRISP, surfaces = SurfaceTone.MONO, colorFromArtwork = false,
+        seedColor = EMBER, paletteStyle = PaletteStyleOption.TonalSpot, font = AppFont.GEIST,
+        titleFont = TitleFont.DOT_MATRIX, corners = CornerStyle.BALANCED, surfaces = SurfaceTone.MONO, colorFromArtwork = false,
     )
     AppStyle.SOFT -> copy(
         seedColor = SOFT_PEACH, paletteStyle = PaletteStyleOption.TonalSpot, font = AppFont.OUTFIT,
@@ -197,7 +200,7 @@ data class ThemeSettings(
     /** Re-seed the whole app from the playing track's artwork. */
     val colorFromArtwork: Boolean = true,
     val playerBackground: PlayerBackground = PlayerBackground.BLUR,
-    val font: AppFont = AppFont.SPACE_GROTESK,
+    val font: AppFont = AppFont.GEIST,
     val textWeight: TextWeight = TextWeight.MEDIUM,
     /** Private copied file ID, never an external storage path or URI. */
     val customFontId: String = "",
@@ -205,7 +208,7 @@ data class ThemeSettings(
     /** The look as a whole; see [effective]. */
     val style: AppStyle = AppStyle.SIGNAL,
     val titleFont: TitleFont = TitleFont.DOT_MATRIX,
-    val corners: CornerStyle = CornerStyle.CRISP,
+    val corners: CornerStyle = CornerStyle.BALANCED,
     val surfaces: SurfaceTone = SurfaceTone.MONO,
 
     )

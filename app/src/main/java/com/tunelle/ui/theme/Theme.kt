@@ -329,7 +329,26 @@ val SpaceGrotesk = FontFamily(
 )
 
 /**
- * Doto, a dot-matrix face for big titles and numbers in the Signal look
+ * Geist, the Signal look's text face: a clean, modern grotesque made for screens
+ * (SIL Open Font License; see third_party/geist). One variable file.
+ */
+@OptIn(ExperimentalTextApi::class)
+val Geist = FontFamily(
+    listOf(300, 400, 500, 600, 700).map { w ->
+        Font(R.font.geist_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+/** Geist Mono, for the small uppercase labels over sections in the Signal look. */
+@OptIn(ExperimentalTextApi::class)
+val GeistMono = FontFamily(
+    listOf(400, 500).map { w ->
+        Font(R.font.geist_mono_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+/**
+ * Doto, a dot-matrix face for small numbers in the Signal look (the date, song times)
  * (SIL Open Font License; see third_party/doto). Set heavy so the dots read.
  */
 @OptIn(ExperimentalTextApi::class)
@@ -349,6 +368,7 @@ internal fun rememberAppFont(settings: ThemeSettings): FontFamily {
     val font = settings.effective().font
     return remember(font, settings.customFontId) {
         when (font) {
+            com.tunelle.data.settings.AppFont.GEIST -> Geist
             com.tunelle.data.settings.AppFont.SPACE_GROTESK -> SpaceGrotesk
             com.tunelle.data.settings.AppFont.SYSTEM -> FontFamily.SansSerif
             com.tunelle.data.settings.AppFont.OUTFIT -> Outfit
@@ -369,12 +389,12 @@ private fun rememberAppTypography(settings: ThemeSettings): Typography {
     return remember(family, settings.textWeight, dots) {
         fun TextStyle.readable() = copy(fontFamily = family,
             fontWeight = FontWeight(maxOf(fontWeight?.weight ?: 400, settings.textWeight.minimum)))
-        // Big titles in dot matrix, heavy and a touch apart so each dot reads; the
-        // smaller headline stays in the text face, where dots would blur together.
-        fun TextStyle.title() = if (!dots) readable() else copy(fontFamily = DotMatrix, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+        // Signal: big titles in the text face, medium weight and set tight, like an
+        // editorial headline. The dot face is kept for small numbers, drawn by hand.
+        fun TextStyle.title(spacing: Float) = if (!dots) readable() else copy(fontFamily = family, fontWeight = FontWeight.Medium, letterSpacing = spacing.sp)
         AppTypography.run { copy(
-            displayLarge = displayLarge.title(), displayMedium = displayMedium.title(), displaySmall = displaySmall.title(),
-            headlineLarge = headlineLarge.title(), headlineMedium = headlineMedium.title(), headlineSmall = headlineSmall.readable(),
+            displayLarge = displayLarge.title(-1.8f), displayMedium = displayMedium.title(-1.5f), displaySmall = displaySmall.title(-1.2f),
+            headlineLarge = headlineLarge.title(-0.9f), headlineMedium = headlineMedium.title(-0.6f), headlineSmall = headlineSmall.title(-0.3f),
             titleLarge = titleLarge.readable(), titleMedium = titleMedium.readable(), titleSmall = titleSmall.readable(),
             bodyLarge = bodyLarge.readable(), bodyMedium = bodyMedium.readable(), bodySmall = bodySmall.readable(),
             labelLarge = labelLarge.readable(), labelMedium = labelMedium.readable(), labelSmall = labelSmall.readable(),

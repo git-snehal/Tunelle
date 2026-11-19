@@ -61,7 +61,10 @@ fun QuickSound(onOpenEqualizer: (() -> Unit)?, modifier: Modifier = Modifier) {
         modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(vertical = 12.dp),
     ) {
         Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+            if (com.tunelle.ui.theme.LocalDotTitles.current) {
+                // The shape of this device's sound, changing as the sliders below move.
+                com.tunelle.ui.components.SoundShape(Modifier.size(40.dp), ink = MaterialTheme.colorScheme.onSurface)
+            } else Box(Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
                 Icon(device.kind.icon(), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimary)
             }
             Spacer(Modifier.width(12.dp))

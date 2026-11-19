@@ -388,24 +388,22 @@ fun HomeScreen(
                             }
                         }
                     }
-                    // Then the greeting, the width of the page, with the name under it.
-                    Text(
-                        com.tunelle.ui.theme.tr(greeting) + if (firstName != null) "," else "",
-                        style = MaterialTheme.typography.displaySmall,
-                        maxLines = 2,
+                    // Then the greeting, the width of the page: in the app's language, then in
+                    // each language picked on the welcome in turn, ending on the ember full stop.
+                    val library by AppSettings.library.collectAsState()
+                    Greeting(
+                        base = com.tunelle.ui.theme.tr(greeting) + if (firstName != null) ", $firstName" else "",
+                        languages = library.musicLanguages.mapNotNull(com.tunelle.data.MusicLanguage::of),
+                        part = dayPart(hour),
+                        playing = actions.isPlaying && !covered,
+                        animate = !ui.reduceAnimation,
                         modifier = Modifier.padding(top = 18.dp),
-                    )
-                    if (firstName != null) Text(
-                        firstName,
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
                     // Where the music is going and how it's tuned, a tap from the equalizer.
                     if (onOpenSound != null) SoundChip(onOpenSound, Modifier.padding(top = 14.dp))
                 }
             }
+            item(key = "jump-back-in") { JumpBackIn(actions, Modifier.padding(top = 10.dp)) }
             if (ui.homeStreaks && badges.isNotEmpty()) item(key = "streaks") { StreakPills(badges) }
             item(key = "festival") { FestivalCard() }
             itemsIndexed(runtime.banners.filter { platform in it.platforms && it.id !in closedBanners }, key = { _, banner -> "remote-banner:${banner.id}" }) { _, banner ->
@@ -662,7 +660,7 @@ private fun QuickPicks(shelf: HomeShelf, onItemClick: (ShelfItem) -> Unit, actio
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Artwork(item.thumbnailUrl.artworkAt(ROW_ART_PX), Modifier.size(48.dp))
+                            Artwork(item.thumbnailUrl.artworkAt(ROW_ART_PX), Modifier.size(48.dp), com.tunelle.ui.theme.coverShape(MaterialTheme.shapes.small))
                             Column(Modifier.weight(1f)) {
                                 Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
                                 com.tunelle.ui.components.SubtitleLine(item.subtitle, explicit = item.explicit)
@@ -819,23 +817,14 @@ internal fun MixesShelf(
     /** A mix started from this row, for Home's order. */
     onPlay: () -> Unit = {},
 ) {
-    Column(Modifier.padding(top = 18.dp)) {
-        Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            // The same accent point as the other section headers, in the dot-matrix looks.
-            if (com.tunelle.ui.theme.LocalDotTitles.current) {
-                Box(Modifier.padding(end = 10.dp).size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-            }
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            )
-        }
-        Text(
+    Column {
+        // The same header as every other row, with its line under the title.
+        com.tunelle.ui.components.SectionHeader(title, subtitle = line.takeIf { com.tunelle.ui.theme.LocalDotTitles.current })
+        if (!com.tunelle.ui.theme.LocalDotTitles.current) Text(
             line,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 20.dp),
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
         androidx.compose.foundation.lazy.LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),

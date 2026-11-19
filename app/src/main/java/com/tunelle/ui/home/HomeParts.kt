@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -12,12 +13,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,7 +72,8 @@ internal fun HomeBrand(modifier: Modifier = Modifier) {
             d.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())).uppercase()
     }
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Canvas(Modifier.size(30.dp)) {
+        // Signal keeps the bar to the date alone; the other looks lead with the mark.
+        if (!LocalDotTitles.current) Canvas(Modifier.size(30.dp)) {
             // The mark's own drawing spans about 24..84 across its 108 units; that span fills the box.
             val s = size.width / MARK_SPAN
             scale(s, pivot = Offset(0f, 0f)) {
@@ -78,7 +83,7 @@ internal fun HomeBrand(modifier: Modifier = Modifier) {
                 }
             }
         }
-        Spacer(Modifier.width(10.dp))
+        if (!LocalDotTitles.current) Spacer(Modifier.width(10.dp))
         Text(
             today,
             style = MaterialTheme.typography.labelLarge,
@@ -107,20 +112,43 @@ internal fun SoundChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
                 if (eq.trebleDb != 0f) add(com.tunelle.i18n.Tr.f("Treble {0}", (if (eq.trebleDb > 0) "+" else "") + "%.1f".format(eq.trebleDb).removeSuffix(".0")))
             }.joinToString(" ").ifEmpty { com.tunelle.i18n.Tr.t("Custom sound") }
     }
+    // The moment a new output takes over: the shape swells out and settles, the name decodes in,
+    // and the phone gives one soft tap. Not on first showing, only on a change.
+    val pulse = remember { androidx.compose.animation.core.Animatable(0f) }
+    var shownName by remember { androidx.compose.runtime.mutableStateOf(device.name) }
+    var seenKey by remember { androidx.compose.runtime.mutableStateOf(device.key) }
+    val haptics = com.tunelle.ui.components.rememberHaptics()
+    androidx.compose.runtime.LaunchedEffect(device.key, device.name) {
+        if (device.key == seenKey) { shownName = device.name; return@LaunchedEffect }
+        seenKey = device.key
+        haptics.tick()
+        launch { pulse.snapTo(1f); pulse.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 160f)) }
+        val target = device.name
+        for (s in 1..12) {
+            val kept = target.length * s / 12
+            shownName = target.take(kept) + (0 until minOf(5, target.length - kept)).map { "▖▗▘▙▚▛▜▝▞▟".random() }.joinToString("")
+            kotlinx.coroutines.delay(38)
+        }
+        shownName = target
+    }
+    val signal = LocalDotTitles.current
     Row(
         modifier
             .clip(CircleShape)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .then(if (signal) Modifier.background(MaterialTheme.colorScheme.surfaceContainer) else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape))
             .clickable(role = Role.Button, onClickLabel = com.tunelle.i18n.Tr.t("Tune the sound"), onClick = onClick)
             .padding(start = 6.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        androidx.compose.foundation.layout.Box(
+        if (signal) {
+            // Your sound's own shape, which differs per device.
+            com.tunelle.ui.components.SoundShape(Modifier.size(28.dp), ink = MaterialTheme.colorScheme.onSurface, pulse = { pulse.value })
+        } else androidx.compose.foundation.layout.Box(
             Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center,
         ) { Icon(device.kind.icon(), null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary) }
         Spacer(Modifier.width(10.dp))
-        Text(device.name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(shownName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Text(
             "  ·  $sound",
             style = MaterialTheme.typography.labelLarge,
@@ -173,3 +201,74 @@ internal fun LanguageArtistsShelf(onItemClick: (ShelfItem) -> Unit) {
         )
     }
 }
+
+/**
+ * Jump back in: the last song played before the one in the player, its cover
+ * framed deep in a tunnel of arches, with a play button. Nothing shows until
+ * something has been played.
+ */
+@Composable
+internal fun JumpBackIn(actions: com.tunelle.ui.browse.SongActions, modifier: Modifier = Modifier) {
+    val records by com.tunelle.data.history.History.records.collectAsState()
+    val songs = remember(records, actions.currentVideoId) {
+        com.tunelle.data.history.History.recents(records, 20).filter { it.videoId != actions.currentVideoId }
+    }
+    val song = songs.firstOrNull() ?: return
+    val ink = MaterialTheme.colorScheme.onSurface
+    val play = { actions.playAll(songs, 0, false, com.tunelle.i18n.Tr.t("Jump back in")) }
+    Row(
+        modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .clickable(onClickLabel = com.tunelle.i18n.Tr.t("Play"), onClick = play)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.foundation.layout.Box(Modifier.size(width = 112.dp, height = 98.dp)) {
+            // Two outlines going back into the tunnel, then the cover in its arch.
+            Canvas(Modifier.matchParentSize()) {
+                val w = size.width
+                val h = size.height
+                listOf(1.dp.toPx() to 0.16f, 11.dp.toPx() to 0.32f).forEach { (inset, a) ->
+                    val r = w / 2f - inset
+                    drawPath(
+                        androidx.compose.ui.graphics.Path().apply {
+                            moveTo(inset, h)
+                            lineTo(inset, inset + r)
+                            arcTo(androidx.compose.ui.geometry.Rect(inset, inset, w - inset, inset + 2 * r), 180f, 180f, false)
+                            lineTo(w - inset, h)
+                        },
+                        ink.copy(alpha = a),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(1.4.dp.toPx()),
+                    )
+                }
+            }
+            com.tunelle.ui.components.Artwork(
+                song.thumbnailUrl,
+                Modifier.align(Alignment.BottomCenter).size(width = 64.dp, height = 72.dp),
+                com.tunelle.ui.theme.ArchShape(8.dp),
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+            Text(
+                com.tunelle.i18n.Tr.t("Jump back in").uppercase(),
+                fontFamily = com.tunelle.ui.theme.GeistMono,
+                fontSize = 11.sp,
+                letterSpacing = 1.4.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+            Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            androidx.compose.foundation.layout.Box(
+                Modifier.padding(top = 10.dp).size(38.dp).clip(CircleShape).background(ink).clickable(onClickLabel = com.tunelle.i18n.Tr.t("Play"), onClick = play),
+                contentAlignment = Alignment.Center,
+            ) { Icon(androidx.compose.material.icons.Icons.Rounded.PlayArrow, null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.surface) }
+        }
+    }
+}
+

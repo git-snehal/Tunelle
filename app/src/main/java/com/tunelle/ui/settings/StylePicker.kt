@@ -76,6 +76,7 @@ private fun cornerOf(c: CornerStyle): Dp = when (c) {
 }
 
 private fun familyOf(f: AppFont): FontFamily = when (f) {
+    AppFont.GEIST -> com.tunelle.ui.theme.Geist
     AppFont.SPACE_GROTESK -> SpaceGrotesk
     AppFont.OUTFIT -> Outfit
     AppFont.SERIF -> FontFamily.Serif
@@ -95,7 +96,7 @@ private fun StyleCard(look: ThemeSettings, style: AppStyle, selected: Boolean, m
         AppStyle.VIVID -> Triple(Color(0xFF2A0F3D), Color.White, Color(0xFF7A2E8F))
         AppStyle.CUSTOM -> Triple(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.surfaceContainerHighest)
     }
-    val titleFamily = if (look.titleFont == TitleFont.DOT_MATRIX) DotMatrix else familyOf(look.font)
+    val titleFamily = familyOf(look.font)
     Column(
         modifier
             .clip(shape)
@@ -113,7 +114,7 @@ private fun StyleCard(look: ThemeSettings, style: AppStyle, selected: Boolean, m
                 style.label,
                 color = ink,
                 fontFamily = titleFamily,
-                fontWeight = if (look.titleFont == TitleFont.DOT_MATRIX) FontWeight.Black else FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 20.sp,
                 modifier = Modifier.weight(1f),
             )

@@ -93,7 +93,7 @@ internal val SETTINGS_CATEGORIES = listOf(
         listOf(
             "Style" to listOf("Style"),
             "Theme" to listOf("Theme", "Pure black"),
-            "Make it your own" to listOf("Corners", "Titles", "Surfaces", "Fonts & readability"),
+            "Make it your own" to listOf("Corners", "Details", "Surfaces", "Fonts & readability"),
             "Colour" to listOf("Color from artwork", "Mini player takes the cover's colour", "Artist pages take the photo's colour", "Artist page shade", "Playlist page background", "Material You", "Accent color", "Palette style"),
             "Glass" to listOf("Lite mode", "Liquid Glass", "Glass style", "Frosted top edge", "Reduce dynamic blur", "Lighter Liquid Glass"),
             "Language and icon" to listOf("App language", "App icon"),

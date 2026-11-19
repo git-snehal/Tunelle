@@ -461,6 +461,8 @@ fun PlayerLayout(
 
     // The plain cover flies, square or edge to edge; the vinyl, cassette and other designs just change view.
     val fullStyle = !landscape && !amoled && state.ui.fullScreenCover && (apple || style == PlayerStyle.CLASSIC || style == PlayerStyle.MINIMAL)
+    // Signal: the cover stands in an arch with the song's progress running round it.
+    val archCover = com.tunelle.ui.theme.LocalDotTitles.current && !fullStyle && !landscape && (style == PlayerStyle.CLASSIC || style == PlayerStyle.MINIMAL)
     val flies = !state.ui.reduceAnimation && !docked && !landscape &&
             style != PlayerStyle.VINYL && style != PlayerStyle.CASSETTE && style != PlayerStyle.HALO &&
             style != PlayerStyle.POLAROID && style != PlayerStyle.LYRICS_FIRST
@@ -1035,6 +1037,9 @@ fun PlayerLayout(
                                                     video = state.coverVideo,
                                                     canvasShowing = state.canvasVideo != null,
                                                     corner = state.ui.coverCornerDp.dp,
+                                                    arch = archCover,
+                                                    progress = { if (state.durationMs > 0) position() / state.durationMs.toFloat() else 0f },
+                                                    onSeek = { f -> if (state.durationMs > 0) actions.seekTo((f * state.durationMs).toLong()) },
                                                 )
                                         }
                                     }
@@ -1224,7 +1229,7 @@ fun PlayerLayout(
                             val lyricAt: ((Long) -> String?)? = if (state.ui.lyricScrubPreview && synced != null) {
                                 { ms -> synced.lines.lastOrNull { it.startMs <= ms + offsetMs }?.text?.takeIf { it.isNotBlank() } }
                             } else null
-                            SeekBar(position, buffered, state.durationMs, onSeek = actions.seekTo, wavy = state.ui.wavySeekbar && !state.ui.reduceAnimation && !apple, playing = state.isPlaying, dotted = state.ui.dotSeekbar && !state.ui.wavySeekbar && com.tunelle.ui.theme.LocalDotTitles.current, lyricAt = lyricAt, marks = marks, quality = { if (state.ui.sourcePill) SourceQualityBadge(current.videoId, state.audioFormat, onClick = { showSignal = true }) })
+                            SeekBar(position, buffered, state.durationMs, onSeek = actions.seekTo, hideTrack = archCover, wavy = state.ui.wavySeekbar && !state.ui.reduceAnimation && !apple, playing = state.isPlaying, dotted = state.ui.dotSeekbar && !state.ui.wavySeekbar && com.tunelle.ui.theme.LocalDotTitles.current, lyricAt = lyricAt, marks = marks, quality = { if (state.ui.sourcePill) SourceQualityBadge(current.videoId, state.audioFormat, onClick = { showSignal = true }) })
                             if (state.ui.statsForNerds) {
                                 Box(Modifier.fillMaxWidth().clickable { showSignal = true }) { NerdStatsLine(state.audioFormat) }
                             }

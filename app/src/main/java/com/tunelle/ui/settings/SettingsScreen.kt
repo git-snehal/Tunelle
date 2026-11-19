@@ -1128,8 +1128,8 @@ private fun settingsSections(
                         PillSegmented(com.tunelle.data.settings.CornerStyle.entries, look.corners, { it.label }, { c -> AppSettings.updateLook { it.copy(corners = c) } })
                     })
                 },
-                Entry("Titles", "titles headings dot matrix font display numbers") {
-                    SettingRow("Titles", icon = Icons.Rounded.TextFields, below = {
+                Entry("Details", "details titles dot matrix numbers mono labels arch covers signal") {
+                    SettingRow("Details", icon = Icons.Rounded.TextFields, below = {
                         PillSegmented(com.tunelle.data.settings.TitleFont.entries, look.titleFont, { it.label }, { f -> AppSettings.updateLook { it.copy(titleFont = f) } })
                     })
                 },
