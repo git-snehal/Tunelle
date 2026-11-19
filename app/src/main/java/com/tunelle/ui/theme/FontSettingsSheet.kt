@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.tunelle.data.settings.AppFont
 import com.tunelle.data.settings.AppSettings
 import com.tunelle.data.settings.TextWeight
+import com.tunelle.data.settings.effective
 import com.tunelle.ui.components.FIELD_TINT
 import com.tunelle.ui.components.FloatingCard
 import com.tunelle.ui.components.launchSafely
@@ -71,7 +72,7 @@ fun FontSettingsSheet(onDismiss: () -> Unit) {
             try {
                 val (id, name) = withContext(Dispatchers.IO) { ImportedFonts.importFont(context, uri) }
                 val previous = AppSettings.theme.value.customFontId
-                AppSettings.updateTheme { it.copy(font = AppFont.CUSTOM, customFontId = id, customFontName = name) }
+                AppSettings.updateLook { it.copy(font = AppFont.CUSTOM, customFontId = id, customFontName = name) }
                 withContext(Dispatchers.IO) { ImportedFonts.remove(context, previous) }
                 message = com.tunelle.i18n.Tr.f("Imported {0}", name)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
@@ -123,10 +124,10 @@ fun FontSettingsSheet(onDismiss: () -> Unit) {
                             FontTile(
                                 name = if (font == AppFont.CUSTOM) theme.customFontName.ifBlank { font.label } else font.label,
                                 family = rememberAppFont(theme.copy(font = font)),
-                                selected = theme.font == font,
+                                selected = theme.effective().font == font,
                                 enabled = available,
                                 modifier = Modifier.weight(1f),
-                            ) { AppSettings.updateTheme { it.copy(font = font) } }
+                            ) { AppSettings.updateLook { it.copy(font = font) } }
                         }
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))

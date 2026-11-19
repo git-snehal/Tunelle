@@ -679,8 +679,10 @@ private fun LookStep(picks: List<ExploreFeed.Artist>) {
     val ui by AppSettings.ui.collectAsState()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Spacer(Modifier.height(topInset()))
-        StepTitle("Make it yours", "Change these any time in Settings › Look and feel.")
+        StepTitle("Make it yours", "Change these any time in Settings › Appearance.")
         LookPreview(picks, Modifier.padding(horizontal = 16.dp))
+        Label("Style")
+        com.tunelle.ui.settings.StylePicker(theme, Modifier.padding(horizontal = 16.dp))
         Label("Theme")
         PillSegmented(
             ThemeMode.entries,

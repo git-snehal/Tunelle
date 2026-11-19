@@ -1,6 +1,7 @@
 package com.tunelle.ui.components
 
 import android.graphics.Bitmap
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color

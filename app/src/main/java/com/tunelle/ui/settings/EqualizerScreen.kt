@@ -125,6 +125,7 @@ fun EqualizerScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
                 )
             }
         }
+        item { DeviceSoundCard() }
         item {
             Column(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()
@@ -168,6 +169,17 @@ fun EqualizerScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
                             Text(formatHz(EQ_BANDS_HZ[i]), style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
                         }
                     }
+                }
+            }
+        }
+        item { GroupLabel("Tone") }
+        item {
+            GroupCard {
+                DbSlider("Bass", eq.bassDb, eq.enabled) { v -> AppSettings.updateEqualizer { it.copy(enabled = true, bassDb = v) } }
+                DbSlider("Treble", eq.trebleDb, eq.enabled) { v -> AppSettings.updateEqualizer { it.copy(enabled = true, trebleDb = v) } }
+                DbSlider("Preamp", eq.preampDb, eq.enabled) { v -> AppSettings.updateEqualizer { it.copy(preampDb = v) } }
+                LabeledSlider("Balance", eq.balance, -1f..1f, eq.enabled, format = ::formatBalance) { v ->
+                    AppSettings.updateEqualizer { it.copy(balance = if (abs(v) < 0.04f) 0f else v) }
                 }
             }
         }
@@ -216,17 +228,6 @@ fun EqualizerScreen(contentPadding: PaddingValues, onBack: () -> Unit) {
                         else "The equalizer that came with your phone. Opening it turns on System audio effects",
                         icon = Icons.Rounded.PhoneAndroid,
                     )
-                }
-            }
-        }
-        item { GroupLabel("Tone") }
-        item {
-            GroupCard {
-                DbSlider("Bass", eq.bassDb, eq.enabled) { v -> AppSettings.updateEqualizer { it.copy(bassDb = v) } }
-                DbSlider("Treble", eq.trebleDb, eq.enabled) { v -> AppSettings.updateEqualizer { it.copy(trebleDb = v) } }
-                DbSlider("Preamp", eq.preampDb, eq.enabled) { v -> AppSettings.updateEqualizer { it.copy(preampDb = v) } }
-                LabeledSlider("Balance", eq.balance, -1f..1f, eq.enabled, format = ::formatBalance) { v ->
-                    AppSettings.updateEqualizer { it.copy(balance = if (abs(v) < 0.04f) 0f else v) }
                 }
             }
         }

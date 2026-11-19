@@ -127,7 +127,56 @@ enum class PlayerStyle(val label: String, val summary: String) {
 
 @Serializable
 enum class AppFont(val label: String) {
-    SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
+    SPACE_GROTESK("Space Grotesk"), SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
+}
+
+/**
+ * Tunelle's looks. Each built-in style sets the accent, palette, type, corners and
+ * surfaces together; [CUSTOM] keeps whatever the listener picked for each of them.
+ */
+@Serializable
+enum class AppStyle(val label: String, val summary: String) {
+    SIGNAL("Signal", "Black, white and one ember accent, with dot-matrix titles"),
+    SOFT("Soft", "Warm pastels, round corners and friendly type"),
+    VIVID("Vivid", "Bold colour everywhere, taken from what's playing"),
+    CUSTOM("Custom", "Your own mix of accent, font, corners and titles"),
+}
+
+/** The face big titles and numbers are set in. */
+@Serializable
+enum class TitleFont(val label: String) { DOT_MATRIX("Dot matrix"), SAME("Same as text") }
+
+/** How round cards, sheets and buttons are. */
+@Serializable
+enum class CornerStyle(val label: String) { CRISP("Crisp"), BALANCED("Balanced"), ROUND("Round") }
+
+/** Whether backgrounds and cards stay neutral grey or take a tint of the accent. */
+@Serializable
+enum class SurfaceTone(val label: String) { MONO("Neutral"), TINTED("Tinted") }
+
+/** Tunelle's signature accent. */
+const val EMBER = 0xFFFF5A36.toInt()
+private const val SOFT_PEACH = 0xFFF2A07B.toInt()
+
+/**
+ * The settings as the [ThemeSettings.style] applies them. Light/dark, pure black,
+ * text weight, Material You and the player background stay the listener's own in
+ * every style; the rest come from the style unless it is [AppStyle.CUSTOM].
+ */
+fun ThemeSettings.effective(): ThemeSettings = when (style) {
+    AppStyle.SIGNAL -> copy(
+        seedColor = EMBER, paletteStyle = PaletteStyleOption.TonalSpot, font = AppFont.SPACE_GROTESK,
+        titleFont = TitleFont.DOT_MATRIX, corners = CornerStyle.CRISP, surfaces = SurfaceTone.MONO, colorFromArtwork = false,
+    )
+    AppStyle.SOFT -> copy(
+        seedColor = SOFT_PEACH, paletteStyle = PaletteStyleOption.TonalSpot, font = AppFont.OUTFIT,
+        titleFont = TitleFont.SAME, corners = CornerStyle.ROUND, surfaces = SurfaceTone.TINTED, colorFromArtwork = false,
+    )
+    AppStyle.VIVID -> copy(
+        seedColor = EMBER, paletteStyle = PaletteStyleOption.Vibrant, font = AppFont.SPACE_GROTESK,
+        titleFont = TitleFont.SAME, corners = CornerStyle.BALANCED, surfaces = SurfaceTone.TINTED, colorFromArtwork = true,
+    )
+    AppStyle.CUSTOM -> this
 }
 
 @Serializable
@@ -141,18 +190,23 @@ data class ThemeSettings(
     /** Material You wallpaper colors, on Android 12 and later. */
     val dynamicColor: Boolean = false,
     /** ARGB seed for the generated scheme when [dynamicColor] is off. */
-    val seedColor: Int = SEED_COLORS.first(),
+    val seedColor: Int = EMBER,
     val paletteStyle: PaletteStyleOption = PaletteStyleOption.TonalSpot,
     /** True black surfaces in dark mode, for OLED screens. */
     val pureBlack: Boolean = true,
     /** Re-seed the whole app from the playing track's artwork. */
     val colorFromArtwork: Boolean = true,
     val playerBackground: PlayerBackground = PlayerBackground.BLUR,
-    val font: AppFont = AppFont.SYSTEM,
+    val font: AppFont = AppFont.SPACE_GROTESK,
     val textWeight: TextWeight = TextWeight.MEDIUM,
     /** Private copied file ID, never an external storage path or URI. */
     val customFontId: String = "",
     val customFontName: String = "",
+    /** The look as a whole; see [effective]. */
+    val style: AppStyle = AppStyle.SIGNAL,
+    val titleFont: TitleFont = TitleFont.DOT_MATRIX,
+    val corners: CornerStyle = CornerStyle.CRISP,
+    val surfaces: SurfaceTone = SurfaceTone.MONO,
 
     )
 
@@ -853,6 +907,8 @@ data class SettingsState(
 
 /** Accent choices offered when Material You is off. */
 val SEED_COLORS = listOf(
+    EMBER, // Tunelle's ember
+    0xFFC6F432.toInt(), // lime
     0xFFE53935.toInt(), // red
     0xFFFF6F00.toInt(), // amber
     0xFFFDD835.toInt(), // yellow
@@ -949,6 +1005,15 @@ object AppSettings {
     }
 
     fun updateTheme(t: (ThemeSettings) -> ThemeSettings) = update { it.copy(theme = t(it.theme)) }
+
+    /**
+     * Changes one part of the look (accent, palette, font, corners, titles,
+     * surfaces, colour from artwork). Under a built-in style this switches to
+     * [AppStyle.CUSTOM], starting from what that style showed, so nothing else jumps.
+     */
+    fun updateLook(t: (ThemeSettings) -> ThemeSettings) = updateTheme { theme ->
+        t(if (theme.style == AppStyle.CUSTOM) theme else theme.effective().copy(style = AppStyle.CUSTOM))
+    }
     fun updateSound(t: (SoundSettings) -> SoundSettings) = update { it.copy(sound = t(it.sound)) }
     fun updateEqualizer(t: (EqualizerSettings) -> EqualizerSettings) = update { it.copy(equalizer = t(it.equalizer)) }
     fun updatePlayback(t: (PlaybackSettings) -> PlaybackSettings) = update { it.copy(playback = t(it.playback)) }

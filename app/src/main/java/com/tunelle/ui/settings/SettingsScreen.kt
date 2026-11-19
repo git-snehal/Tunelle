@@ -184,6 +184,7 @@ import com.tunelle.data.settings.PlayerStyle
 import com.tunelle.data.settings.Recommender
 import com.tunelle.data.settings.SEED_COLORS
 import com.tunelle.data.settings.ThemeMode
+import com.tunelle.data.settings.effective
 import com.tunelle.data.settings.VolumeLevel
 import com.tunelle.data.sponsorblock.SponsorBlock
 import com.tunelle.data.subsonic.Subsonic
@@ -511,6 +512,7 @@ private fun settingsSections(
     val scope = rememberCoroutineScope()
     LaunchedEffect(update) { updateBytes = withContext(Dispatchers.IO) { Updater.cachedBytes(context) } }
     val theme by AppSettings.theme.collectAsState()
+    val look = theme.effective()
     val pb by AppSettings.playback.collectAsState()
     val ui by AppSettings.ui.collectAsState()
     val lib by AppSettings.library.collectAsState()
@@ -1107,13 +1109,31 @@ private fun settingsSections(
         Section(
             "Appearance",
             listOfNotNull(
+                Entry("Style", "style look signal soft vivid custom design theme nothing dot matrix") {
+                    SettingRow("Style", icon = Icons.Rounded.Palette, below = { StylePicker(theme, Modifier.padding(top = 4.dp)) })
+                },
+                Entry("Corners", "corners round rounded crisp sharp shape radius") {
+                    SettingRow("Corners", icon = Icons.Rounded.Palette, below = {
+                        PillSegmented(com.tunelle.data.settings.CornerStyle.entries, look.corners, { it.label }, { c -> AppSettings.updateLook { it.copy(corners = c) } })
+                    })
+                },
+                Entry("Titles", "titles headings dot matrix font display numbers") {
+                    SettingRow("Titles", icon = Icons.Rounded.TextFields, below = {
+                        PillSegmented(com.tunelle.data.settings.TitleFont.entries, look.titleFont, { it.label }, { f -> AppSettings.updateLook { it.copy(titleFont = f) } })
+                    })
+                },
+                Entry("Surfaces", "surfaces background cards neutral grey tinted colour") {
+                    SettingRow("Surfaces", icon = Icons.Rounded.Wallpaper, below = {
+                        PillSegmented(com.tunelle.data.settings.SurfaceTone.entries, look.surfaces, { it.label }, { s -> AppSettings.updateLook { it.copy(surfaces = s) } })
+                    })
+                },
                 Entry("Theme", "dark light system") {
                     SettingRow("Theme", icon = Icons.Rounded.Palette, below = {
                         PillSegmented(ThemeMode.entries, theme.mode, { it.label }, { m -> AppSettings.updateTheme { it.copy(mode = m) } })
                     })
                 },
                 Entry("Color from artwork", "tint album cover") {
-                    ToggleRow("Color from artwork", theme.colorFromArtwork, { v -> AppSettings.updateTheme { it.copy(colorFromArtwork = v) } }, summary = "Tint the app with the playing song's cover", icon = Icons.Rounded.AutoAwesome)
+                    ToggleRow("Color from artwork", look.colorFromArtwork, { v -> AppSettings.updateLook { it.copy(colorFromArtwork = v) } }, summary = "Tint the app with the playing song's cover", icon = Icons.Rounded.AutoAwesome)
                 },
                 Entry("Mini player takes the cover's colour", "mini player pill tint colour artwork plain") {
                     ToggleRow("Mini player takes the cover's colour", ui.miniPlayerTint, { v -> AppSettings.updateUi { it.copy(miniPlayerTint = v) } }, summary = "Off keeps the small player's glass plain, whatever is playing", icon = Icons.Rounded.AutoAwesome)
@@ -1143,11 +1163,11 @@ private fun settingsSections(
                     SettingRow("Accent color", icon = Icons.Rounded.Palette, below = {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             SEED_COLORS.forEach { argb ->
-                                val selected = theme.seedColor == argb
+                                val selected = look.seedColor == argb
                                 Box(
                                     Modifier.size(38.dp).clip(CircleShape).background(Color(argb))
                                         .border(if (selected) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                        .clickable { AppSettings.updateTheme { it.copy(seedColor = argb) } },
+                                        .clickable { AppSettings.updateLook { it.copy(seedColor = argb) } },
                                     contentAlignment = Alignment.Center,
                                 ) { if (selected) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
                             }
@@ -1158,7 +1178,7 @@ private fun settingsSections(
                     SettingRow("Palette style", icon = Icons.Rounded.Palette, below = {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PaletteStyleOption.entries.forEach { s ->
-                                FilterChip(theme.paletteStyle == s, { AppSettings.updateTheme { it.copy(paletteStyle = s) } }, label = { Text(s.label) })
+                                FilterChip(look.paletteStyle == s, { AppSettings.updateLook { it.copy(paletteStyle = s) } }, label = { Text(s.label) })
                             }
                         }
                     })
@@ -1171,7 +1191,7 @@ private fun settingsSections(
                     NavRow("App icon", { appIconDialog = true }, summary = "Choose the Tunelle icon on your home screen", icon = Icons.Rounded.Palette)
                 },
                 Entry("Fonts & readability", "font typeface text weight bold thin ttf otf import custom") {
-                    NavRow("Fonts & readability", { fontDialog = true }, summary = "Built-in fonts, text weight and your own font file", icon = Icons.Rounded.TextFields, value = theme.font.label)
+                    NavRow("Fonts & readability", { fontDialog = true }, summary = "Built-in fonts, text weight and your own font file", icon = Icons.Rounded.TextFields, value = look.font.label)
                 },
                 Entry("Pure black", "oled amoled") {
                     ToggleRow("Pure black", theme.pureBlack, { v -> AppSettings.updateTheme { it.copy(pureBlack = v) } }, summary = "Black backgrounds with neutral gray cards in dark theme", icon = Icons.Rounded.Wallpaper)

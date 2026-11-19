@@ -1203,7 +1203,10 @@ fun SeekBar(
             derivedStateOf { (((dragFraction ?: heldFraction)?.times(durationMs)?.toLong() ?: position()) / 1000) }
         }
         if (look.seekbarTime != com.tunelle.data.settings.SeekbarTime.HIDDEN) {
-            val timeStyle = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
+            // In the Signal look the clock reads like a dot-matrix display.
+            val timeStyle = if (com.tunelle.ui.theme.LocalDotTitles.current)
+                MaterialTheme.typography.labelMedium.copy(fontFamily = com.tunelle.ui.theme.DotMatrix, fontWeight = androidx.compose.ui.text.font.FontWeight.Black, fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp), letterSpacing = androidx.compose.ui.unit.TextUnit(0.6f, androidx.compose.ui.unit.TextUnitType.Sp))
+            else MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
             val measurer = androidx.compose.ui.text.rememberTextMeasurer()
             val density = LocalDensity.current
             // Reserve identical, stable side columns using the whole track's length.
