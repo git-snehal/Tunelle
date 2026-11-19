@@ -17,6 +17,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -102,11 +104,14 @@ fun TunelleTheme(
     } else {
         generated
     }
-    val scheme = when {
+    val toned = when {
         dark && look.pureBlack -> base.toPureBlack()
         look.surfaces == SurfaceTone.MONO -> base.toNeutral(dark)
         else -> base
     }
+    // Neutral looks (Signal) show the accent exactly as picked, ember stays ember in light and
+    // dark alike, instead of the tonal palette's darker or paler stand-in for it.
+    val scheme = if (look.surfaces == SurfaceTone.MONO && seed == null && !useWallpaper) toned.withExactAccent(Color(look.seedColor)) else toned
 
     MaterialTheme(
         colorScheme = scheme.animated(),
@@ -170,6 +175,22 @@ private fun ColorScheme.toPureBlack(): ColorScheme = copy(
     outline = Color(0xFF4A4A4F),
     outlineVariant = Color(0xFF2E2E32),
 )
+
+/**
+ * The accent as picked for primary, with readable ink on it, and a soft wash of it
+ * for containers. Text on the accent goes black or white by the accent's lightness.
+ */
+private fun ColorScheme.withExactAccent(accent: Color): ColorScheme {
+    val ink = if (accent.luminance() > 0.45f) Color(0xFF111112) else Color.White
+    return copy(
+        primary = accent,
+        onPrimary = ink,
+        primaryContainer = accent.copy(alpha = 0.18f).compositeOver(surface),
+        onPrimaryContainer = onSurface,
+        inversePrimary = accent,
+        surfaceTint = accent,
+    )
+}
 
 /**
  * Neutral backgrounds and cards for the Signal look: white and light greys,
