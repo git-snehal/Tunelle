@@ -111,6 +111,8 @@ fun HomeScreen(
     covered: Boolean = false,
     /** Opens every Speed dial pick on a page of its own. */
     onOpenSpeedDial: () -> Unit = {},
+    /** Opens the equalizer, for the sound chip under the greeting. */
+    onOpenSound: (() -> Unit)? = null,
 ) {
     val platform = "android"
     val runtime by com.tunelle.data.config.RemoteConfig.state.collectAsState()
@@ -365,25 +367,12 @@ fun HomeScreen(
                     .substringBefore(' ').trim().takeIf { it.isNotBlank() }
                 Column(
                     Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp),
+                        .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp),
                 ) {
-                    // The greeting sits right over the name, the buttons beside the pair.
+                    // A slim bar: the mark and today's date on the left, the buttons on the right.
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Column(Modifier.weight(1f)) {
-                            if (firstName != null) {
-                                Text(com.tunelle.ui.theme.tr(greeting), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                                Text(
-                                    firstName,
-                                    style = MaterialTheme.typography.displaySmall,
-                                    maxLines = 2,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 2.dp),
-                                )
-                            } else {
-                                Text(com.tunelle.ui.theme.tr(greeting), style = MaterialTheme.typography.displaySmall, maxLines = 2)
-                            }
-                        }
+                        HomeBrand(Modifier.weight(1f))
                         if (onRecognize != null) {
                             GlassIconButton(Icons.Rounded.GraphicEq, "Name a song playing nearby", onRecognize, size = 48.dp)
                         }
@@ -399,6 +388,22 @@ fun HomeScreen(
                             }
                         }
                     }
+                    // Then the greeting, the width of the page, with the name under it.
+                    Text(
+                        com.tunelle.ui.theme.tr(greeting) + if (firstName != null) "," else "",
+                        style = MaterialTheme.typography.displaySmall,
+                        maxLines = 2,
+                        modifier = Modifier.padding(top = 18.dp),
+                    )
+                    if (firstName != null) Text(
+                        firstName,
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                    // Where the music is going and how it's tuned, a tap from the equalizer.
+                    if (onOpenSound != null) SoundChip(onOpenSound, Modifier.padding(top = 14.dp))
                 }
             }
             if (ui.homeStreaks && badges.isNotEmpty()) item(key = "streaks") { StreakPills(badges) }
@@ -432,6 +437,8 @@ fun HomeScreen(
                 else if (picks != null) QuickPicks(picks.copy(title = title, subtitle = ""), onItemClick, historyAction)
                 else SectionHeader(title, action = historyAction)
             }
+            // Artists in the languages picked on the welcome.
+            item(key = "languages") { LanguageArtistsShelf(onItemClick) }
             order.forEach { id ->
                 when {
                     id == "mixes" -> item(key = "mixes") {
@@ -703,7 +710,7 @@ private fun homeOrder(personal: List<com.tunelle.data.reco.HomeLayout.Personal>,
 @Composable
 internal fun DaylistHero(mix: com.tunelle.data.history.DailyMixes.Mix, onPlay: () -> Unit) {
     val covers = mix.covers
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
+    val shape = MaterialTheme.shapes.extraLarge
     val blurs = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
     val white = androidx.compose.ui.graphics.Color.White
     Box(
@@ -744,6 +751,7 @@ internal fun DaylistHero(mix: com.tunelle.data.history.DailyMixes.Mix, onPlay: (
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("YOUR DAYLIST", style = MaterialTheme.typography.labelMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    fontFamily = if (com.tunelle.ui.theme.LocalDotTitles.current) com.tunelle.ui.theme.DotMatrix else null,
                     color = white.copy(alpha = 0.75f), letterSpacing = 1.sp)
                 Text(mix.title, style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     color = white, maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))

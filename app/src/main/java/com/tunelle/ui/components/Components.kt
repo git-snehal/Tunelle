@@ -550,10 +550,19 @@ fun SectionHeader(
                 Text(
                     com.tunelle.ui.theme.tr(subtitle).uppercase(),
                     style = MaterialTheme.typography.labelMedium,
+                    letterSpacing = 1.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(com.tunelle.ui.theme.tr(title), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The dot-matrix looks lead each section with a point of the accent, like a status light.
+                if (com.tunelle.ui.theme.LocalDotTitles.current) {
+                    Box(Modifier.padding(end = 10.dp).size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                }
+                Text(com.tunelle.ui.theme.tr(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
         action?.invoke()
     }

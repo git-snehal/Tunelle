@@ -628,6 +628,7 @@ fun AppRoot(vm: PlayerViewModel) {
                                 onRecognize = { nav.navigate("recognize") },
                                 covered = playerCovers,
                                 onOpenSpeedDial = { nav.navigate("speed-dial") },
+                                onOpenSound = { nav.navigate("equalizer") },
                             )
                         }
                         page("speed-dial") {
