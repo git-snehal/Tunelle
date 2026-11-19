@@ -90,7 +90,12 @@ internal fun SpeedDialSection(
     if (shown.isEmpty()) return
     val pageCount = (shown.size + PER_PAGE - 1) / PER_PAGE
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)) {
-        Row(
+        // Signal: the same quiet mono label as every other row, with "Show all" as its action.
+        if (com.tunelle.ui.theme.LocalDotTitles.current) com.tunelle.ui.components.SectionHeader(
+            title,
+            modifier = Modifier.clickable(onClickLabel = "Show all", onClick = onOpenAll),
+            action = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Show all", Modifier.size(24.dp)) },
+        ) else Row(
             Modifier.fillMaxWidth().clickable(onClickLabel = "Show all", onClick = onOpenAll).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

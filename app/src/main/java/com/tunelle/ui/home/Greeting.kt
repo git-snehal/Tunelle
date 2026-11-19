@@ -129,11 +129,11 @@ private fun DotGlyph(beat: MutableFloatState) {
                 val s = 1f + 0.55f * beat.floatValue
                 scaleX = s
                 scaleY = s
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.86f)
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.74f)
             },
     ) {
-        val r = size.width * 0.36f
-        drawCircle(EMBER, radius = r, center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.86f - r * 0.2f))
+        val r = size.width * 0.3f
+        drawCircle(EMBER, radius = r, center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.74f))
     }
 }
 
