@@ -461,6 +461,8 @@ fun PlayerLayout(
 
     // The plain cover flies, square or edge to edge; the vinyl, cassette and other designs just change view.
     val fullStyle = !landscape && !amoled && state.ui.fullScreenCover && (apple || style == PlayerStyle.CLASSIC || style == PlayerStyle.MINIMAL)
+    // Signal: the cover stands in an arch with the song's progress running round it.
+    val archCover = com.tunelle.ui.theme.LocalDotTitles.current && !fullStyle && !landscape && (style == PlayerStyle.CLASSIC || style == PlayerStyle.MINIMAL)
     val flies = !state.ui.reduceAnimation && !docked && !landscape &&
             style != PlayerStyle.VINYL && style != PlayerStyle.CASSETTE && style != PlayerStyle.HALO &&
             style != PlayerStyle.POLAROID && style != PlayerStyle.LYRICS_FIRST
@@ -1035,6 +1037,9 @@ fun PlayerLayout(
                                                     video = state.coverVideo,
                                                     canvasShowing = state.canvasVideo != null,
                                                     corner = state.ui.coverCornerDp.dp,
+                                                    arch = archCover,
+                                                    progress = { if (state.durationMs > 0) position() / state.durationMs.toFloat() else 0f },
+                                                    onSeek = { f -> if (state.durationMs > 0) actions.seekTo((f * state.durationMs).toLong()) },
                                                 )
                                         }
                                     }
@@ -1224,7 +1229,7 @@ fun PlayerLayout(
                             val lyricAt: ((Long) -> String?)? = if (state.ui.lyricScrubPreview && synced != null) {
                                 { ms -> synced.lines.lastOrNull { it.startMs <= ms + offsetMs }?.text?.takeIf { it.isNotBlank() } }
                             } else null
-                            SeekBar(position, buffered, state.durationMs, onSeek = actions.seekTo, wavy = state.ui.wavySeekbar && !state.ui.reduceAnimation && !apple, playing = state.isPlaying, lyricAt = lyricAt, marks = marks, quality = { if (state.ui.sourcePill) SourceQualityBadge(current.videoId, state.audioFormat, onClick = { showSignal = true }) })
+                            SeekBar(position, buffered, state.durationMs, onSeek = actions.seekTo, hideTrack = archCover, wavy = state.ui.wavySeekbar && !state.ui.reduceAnimation && !apple, playing = state.isPlaying, dotted = state.ui.dotSeekbar && !state.ui.wavySeekbar && com.tunelle.ui.theme.LocalDotTitles.current, lyricAt = lyricAt, marks = marks, quality = { if (state.ui.sourcePill) SourceQualityBadge(current.videoId, state.audioFormat, onClick = { showSignal = true }) })
                             if (state.ui.statsForNerds) {
                                 Box(Modifier.fillMaxWidth().clickable { showSignal = true }) { NerdStatsLine(state.audioFormat) }
                             }
@@ -1240,9 +1245,30 @@ fun PlayerLayout(
                                 animate = !state.ui.reduceAnimation && state.loadingMessage?.startsWith("Offline") != true,
                                 progress = { if (state.durationMs > 0) position() / state.durationMs.toFloat() else 0f },
                             )
-                            if (!state.ui.hideVolumeBar && !minimal && roomy) VolumeBar(Modifier.padding(vertical = 4.dp))
-                            Spacer(Modifier.height(10.dp))
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            // Signal: one calm row under the controls, lyrics, your sound, queue; the
+                            // volume keys do volume, and sleep and comments live in the "…" menu.
+                            val signalRow = com.tunelle.ui.theme.LocalDotTitles.current && !apple
+                            if (signalRow) {
+                                Spacer(Modifier.height(14.dp))
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    GlassToggle(PlayerIcons.Lyrics, "Lyrics", pane == Pane.LYRICS, { toggle(Pane.LYRICS) })
+                                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                        androidx.compose.animation.AnimatedContent(pane == Pane.QUEUE, label = "signalRow") { queue ->
+                                            if (queue) ModesPill(state.shuffleMode, state.smartShuffleAvailable, state.repeatMode, actions.toggleShuffle, actions.cycleRepeat, filled = false, enabled = true)
+                                            else com.tunelle.ui.settings.SoundPill(
+                                                onClick = { showOutput = true },
+                                                sleepLabel = sleepLabel,
+                                                onSleep = { showSleep = true },
+                                                modifier = Modifier.padding(horizontal = 10.dp),
+                                            )
+                                        }
+                                    }
+                                    GlassToggle(Icons.AutoMirrored.Rounded.FormatListBulleted, "Queue", pane == Pane.QUEUE, { toggle(Pane.QUEUE) })
+                                }
+                            }
+                            if (!signalRow && !state.ui.hideVolumeBar && !minimal && roomy) VolumeBar(Modifier.padding(vertical = 4.dp))
+                            if (!signalRow) Spacer(Modifier.height(10.dp))
+                            if (!signalRow) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 GlassToggle(PlayerIcons.Lyrics, "Lyrics", pane == Pane.LYRICS, { toggle(Pane.LYRICS) })
                                 // One pill that morphs between sleep and output, and the queue's modes.
                                 val inQueueNow = pane == Pane.QUEUE
@@ -1299,12 +1325,16 @@ fun PlayerLayout(
                                 )
                                 GlassToggle(Icons.AutoMirrored.Rounded.FormatListBulleted, "Queue", pane == Pane.QUEUE, { toggle(Pane.QUEUE) })
                             }
-                            if (!minimal && roomy && (sleepLabel != null || !state.ui.hideOutputDevice)) Text(
+                            // The device name opens its sound: tap it to tune bass, treble and presets.
+                            if (!signalRow && !minimal && roomy && (sleepLabel != null || !state.ui.hideOutputDevice)) Text(
                                 sleepLabel ?: device,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp)
+                                    .clip(CircleShape)
+                                    .clickable(onClickLabel = com.tunelle.i18n.Tr.t("Sound for this device")) { if (sleepLabel != null) showSleep = true else showOutput = true }
+                                    .padding(vertical = 6.dp),
                             )
                         }
                     }
@@ -1437,6 +1467,7 @@ fun PlayerLayout(
             onDismiss = { showOutput = false },
             onCast = { showOutput = false; showCast = true },
             onPipeline = { showOutput = false; showSignal = true },
+            onEqualizer = { showOutput = false; actions.openEqualizer() },
         )
         if (showCast) com.tunelle.ui.cast.CastSheet(onDismiss = { showCast = false })
         if (showSleep) SleepTimerDialog(onDismiss = { showSleep = false })

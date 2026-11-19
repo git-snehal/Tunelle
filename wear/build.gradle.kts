@@ -15,7 +15,7 @@ val appVersionCode = Regex("""versionCode = (\d+)""").find(appBuild)!!.groupValu
 
 android {
     namespace = "com.tunelle.wear"
-    compileSdk = 37
+    compileSdkVersion = "android-37.0"
 
     defaultConfig {
         applicationId = "com.tunelle.wear"

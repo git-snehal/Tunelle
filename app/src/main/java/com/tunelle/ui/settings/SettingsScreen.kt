@@ -184,6 +184,7 @@ import com.tunelle.data.settings.PlayerStyle
 import com.tunelle.data.settings.Recommender
 import com.tunelle.data.settings.SEED_COLORS
 import com.tunelle.data.settings.ThemeMode
+import com.tunelle.data.settings.effective
 import com.tunelle.data.settings.VolumeLevel
 import com.tunelle.data.sponsorblock.SponsorBlock
 import com.tunelle.data.subsonic.Subsonic
@@ -511,6 +512,7 @@ private fun settingsSections(
     val scope = rememberCoroutineScope()
     LaunchedEffect(update) { updateBytes = withContext(Dispatchers.IO) { Updater.cachedBytes(context) } }
     val theme by AppSettings.theme.collectAsState()
+    val look = theme.effective()
     val pb by AppSettings.playback.collectAsState()
     val ui by AppSettings.ui.collectAsState()
     val lib by AppSettings.library.collectAsState()
@@ -1031,6 +1033,17 @@ private fun settingsSections(
                 Entry("Spatial audio", "stereo widen immersive") {
                     ToggleRow("Spatial audio", pb.spatialAudio, { v -> AppSettings.updatePlayback { it.copy(spatialAudio = v) } }, summary = "Widens stereo tracks for a more open sound", icon = Icons.Rounded.SurroundSound, beta = true)
                 },
+                Entry("Sound per device", "sound per device headphones earbuds speaker bluetooth wired usb bass treble tune equalizer") {
+                    val device by com.tunelle.data.devicesound.DeviceSound.current.collectAsState()
+                    val perDevice by com.tunelle.data.devicesound.DeviceSound.enabled.collectAsState()
+                    NavRow(
+                        "Sound per device",
+                        onOpenEqualizer,
+                        summary = if (perDevice) com.tunelle.i18n.Tr.f("Bass, treble and EQ for each speaker and pair of headphones · now {0}", device.name)
+                        else "Off: one sound for every speaker and pair of headphones",
+                        icon = device.kind.icon(),
+                    )
+                },
                 Entry("Equalizer", "eq bands tone balance bass treble") {
                     NavRow("Equalizer", onOpenEqualizer, summary = "Fifteen bands, tone and balance", icon = Icons.Rounded.Equalizer)
                 },
@@ -1107,13 +1120,31 @@ private fun settingsSections(
         Section(
             "Appearance",
             listOfNotNull(
+                Entry("Style", "style look signal soft vivid custom design theme nothing dot matrix") {
+                    SettingRow("Style", icon = Icons.Rounded.Palette, below = { StylePicker(theme, Modifier.padding(top = 4.dp)) })
+                },
+                Entry("Corners", "corners round rounded crisp sharp shape radius") {
+                    SettingRow("Corners", icon = Icons.Rounded.Palette, below = {
+                        PillSegmented(com.tunelle.data.settings.CornerStyle.entries, look.corners, { it.label }, { c -> AppSettings.updateLook { it.copy(corners = c) } })
+                    })
+                },
+                Entry("Details", "details titles dot matrix numbers mono labels arch covers signal") {
+                    SettingRow("Details", icon = Icons.Rounded.TextFields, below = {
+                        PillSegmented(com.tunelle.data.settings.TitleFont.entries, look.titleFont, { it.label }, { f -> AppSettings.updateLook { it.copy(titleFont = f) } })
+                    })
+                },
+                Entry("Surfaces", "surfaces background cards neutral grey tinted colour") {
+                    SettingRow("Surfaces", icon = Icons.Rounded.Wallpaper, below = {
+                        PillSegmented(com.tunelle.data.settings.SurfaceTone.entries, look.surfaces, { it.label }, { s -> AppSettings.updateLook { it.copy(surfaces = s) } })
+                    })
+                },
                 Entry("Theme", "dark light system") {
                     SettingRow("Theme", icon = Icons.Rounded.Palette, below = {
                         PillSegmented(ThemeMode.entries, theme.mode, { it.label }, { m -> AppSettings.updateTheme { it.copy(mode = m) } })
                     })
                 },
                 Entry("Color from artwork", "tint album cover") {
-                    ToggleRow("Color from artwork", theme.colorFromArtwork, { v -> AppSettings.updateTheme { it.copy(colorFromArtwork = v) } }, summary = "Tint the app with the playing song's cover", icon = Icons.Rounded.AutoAwesome)
+                    ToggleRow("Color from artwork", look.colorFromArtwork, { v -> AppSettings.updateLook { it.copy(colorFromArtwork = v) } }, summary = "Tint the app with the playing song's cover", icon = Icons.Rounded.AutoAwesome)
                 },
                 Entry("Mini player takes the cover's colour", "mini player pill tint colour artwork plain") {
                     ToggleRow("Mini player takes the cover's colour", ui.miniPlayerTint, { v -> AppSettings.updateUi { it.copy(miniPlayerTint = v) } }, summary = "Off keeps the small player's glass plain, whatever is playing", icon = Icons.Rounded.AutoAwesome)
@@ -1143,11 +1174,11 @@ private fun settingsSections(
                     SettingRow("Accent color", icon = Icons.Rounded.Palette, below = {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             SEED_COLORS.forEach { argb ->
-                                val selected = theme.seedColor == argb
+                                val selected = look.seedColor == argb
                                 Box(
                                     Modifier.size(38.dp).clip(CircleShape).background(Color(argb))
                                         .border(if (selected) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                                        .clickable { AppSettings.updateTheme { it.copy(seedColor = argb) } },
+                                        .clickable { AppSettings.updateLook { it.copy(seedColor = argb) } },
                                     contentAlignment = Alignment.Center,
                                 ) { if (selected) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
                             }
@@ -1158,7 +1189,7 @@ private fun settingsSections(
                     SettingRow("Palette style", icon = Icons.Rounded.Palette, below = {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PaletteStyleOption.entries.forEach { s ->
-                                FilterChip(theme.paletteStyle == s, { AppSettings.updateTheme { it.copy(paletteStyle = s) } }, label = { Text(s.label) })
+                                FilterChip(look.paletteStyle == s, { AppSettings.updateLook { it.copy(paletteStyle = s) } }, label = { Text(s.label) })
                             }
                         }
                     })
@@ -1167,11 +1198,11 @@ private fun settingsSections(
                     NavRow("App language", { languageDialog = true }, icon = Icons.Rounded.Language,
                         value = com.tunelle.ui.theme.AppLanguages.selected(context).label)
                 },
-                Entry("App icon", "launcher icon design glass pearl midnight rose ocean") {
+                Entry("App icon", "launcher icon logo design echo tunnel note paper cream ember") {
                     NavRow("App icon", { appIconDialog = true }, summary = "Choose the Tunelle icon on your home screen", icon = Icons.Rounded.Palette)
                 },
                 Entry("Fonts & readability", "font typeface text weight bold thin ttf otf import custom") {
-                    NavRow("Fonts & readability", { fontDialog = true }, summary = "Built-in fonts, text weight and your own font file", icon = Icons.Rounded.TextFields, value = theme.font.label)
+                    NavRow("Fonts & readability", { fontDialog = true }, summary = "Built-in fonts, text weight and your own font file", icon = Icons.Rounded.TextFields, value = look.font.label)
                 },
                 Entry("Pure black", "oled amoled") {
                     ToggleRow("Pure black", theme.pureBlack, { v -> AppSettings.updateTheme { it.copy(pureBlack = v) } }, summary = "Black backgrounds with neutral gray cards in dark theme", icon = Icons.Rounded.Wallpaper)
@@ -1276,6 +1307,11 @@ private fun settingsSections(
                 },
                 Entry("Match background to cover", "background colour seamless") {
                     ToggleRow("Match background to cover", ui.coverColorBackground, { v -> AppSettings.updateUi { it.copy(coverColorBackground = v) } }, summary = "Paints the player's background in the cover's own colour, so the full-screen cover blends into it", icon = Icons.Rounded.Palette)
+                },
+                Entry("Dot seek bar", "dot matrix dotted progress slider seek bar signal") {
+                    ToggleRow("Dot seek bar", ui.dotSeekbar, { v -> AppSettings.updateUi { it.copy(dotSeekbar = v) } },
+                        summary = "In styles with dot-matrix titles, the bar is a row of dots that light up as the song plays",
+                        icon = Icons.Rounded.MoreHoriz)
                 },
                 Entry("Wavy seek bar", "wave progress slider") {
                     // The Apple Music inspired player keeps its bar plain, so there it's shown off and can't be turned on.
@@ -1786,7 +1822,7 @@ private fun settingsSections(
         ),
         Section(
             "Advanced",
-            listOf(
+            listOfNotNull(
                 Entry("What's new", "release notes changelog version highlights") {
                     NavRow("What's new", { showWhatsNew = true }, summary = com.tunelle.i18n.Tr.f("Highlights and improvements in {0}", BuildConfig.VERSION_NAME), icon = Icons.Rounded.SystemUpdate)
                 },

@@ -122,10 +122,10 @@ object TabEvents {
 }
 
 private enum class Tab(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
-    HOME("home", "Home", Icons.Outlined.Home, Icons.Rounded.Home),
-    EXPLORE("explore", "Explore", Icons.Outlined.Explore, Icons.Rounded.Explore),
-    PODCASTS("podcasts", "Podcasts", Icons.Outlined.Podcasts, Icons.Rounded.Podcasts),
-    LIBRARY("library", "Library", Icons.Outlined.LibraryMusic, Icons.Rounded.LibraryMusic),
+    HOME("home", "Home", com.tunelle.ui.theme.TunelleIcons.Home, com.tunelle.ui.theme.TunelleIcons.HomeOpen),
+    EXPLORE("explore", "Explore", com.tunelle.ui.theme.TunelleIcons.Explore, com.tunelle.ui.theme.TunelleIcons.ExploreOpen),
+    PODCASTS("podcasts", "Podcasts", com.tunelle.ui.theme.TunelleIcons.Podcasts, com.tunelle.ui.theme.TunelleIcons.PodcastsOpen),
+    LIBRARY("library", "Library", com.tunelle.ui.theme.TunelleIcons.Library, com.tunelle.ui.theme.TunelleIcons.LibraryOpen),
 }
 
 private const val SEARCH_ROUTE = "search"
@@ -628,6 +628,7 @@ fun AppRoot(vm: PlayerViewModel) {
                                 onRecognize = { nav.navigate("recognize") },
                                 covered = playerCovers,
                                 onOpenSpeedDial = { nav.navigate("speed-dial") },
+                                onOpenSound = { nav.navigate("equalizer") },
                             )
                         }
                         page("speed-dial") {

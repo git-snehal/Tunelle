@@ -127,7 +127,59 @@ enum class PlayerStyle(val label: String, val summary: String) {
 
 @Serializable
 enum class AppFont(val label: String) {
-    SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
+    GEIST("Geist"), SPACE_GROTESK("Space Grotesk"), SYSTEM("System sans"), OUTFIT("Outfit"), SERIF("Serif"), MONO("Monospace"), CUSTOM("Imported font"),
+}
+
+/**
+ * Tunelle's looks. Each built-in style sets the accent, palette, type, corners and
+ * surfaces together; [CUSTOM] keeps whatever the listener picked for each of them.
+ */
+@Serializable
+enum class AppStyle(val label: String, val summary: String) {
+    SIGNAL("Signal", "Calm black and white, one ember accent, arch-shaped covers and dot-matrix numbers"),
+    SOFT("Soft", "Warm pastels, round corners and friendly type"),
+    VIVID("Vivid", "Bold colour everywhere, taken from what's playing"),
+    CUSTOM("Custom", "Your own mix of accent, font, corners and titles"),
+}
+
+/**
+ * Signal details: dot-matrix numbers (the date, song times), small mono labels over
+ * sections and arch-shaped covers; plain keeps numbers, labels and covers ordinary.
+ */
+@Serializable
+enum class TitleFont(val label: String) { DOT_MATRIX("Signal details"), SAME("Plain") }
+
+/** How round cards, sheets and buttons are. */
+@Serializable
+enum class CornerStyle(val label: String) { CRISP("Crisp"), BALANCED("Balanced"), ROUND("Round") }
+
+/** Whether backgrounds and cards stay neutral grey or take a tint of the accent. */
+@Serializable
+enum class SurfaceTone(val label: String) { MONO("Neutral"), TINTED("Tinted") }
+
+/** Tunelle's signature accent. */
+const val EMBER = 0xFFFF5A36.toInt()
+private const val SOFT_PEACH = 0xFFF2A07B.toInt()
+
+/**
+ * The settings as the [ThemeSettings.style] applies them. Light/dark, pure black,
+ * text weight, Material You and the player background stay the listener's own in
+ * every style; the rest come from the style unless it is [AppStyle.CUSTOM].
+ */
+fun ThemeSettings.effective(): ThemeSettings = when (style) {
+    AppStyle.SIGNAL -> copy(
+        seedColor = EMBER, paletteStyle = PaletteStyleOption.TonalSpot, font = AppFont.GEIST,
+        titleFont = TitleFont.DOT_MATRIX, corners = CornerStyle.BALANCED, surfaces = SurfaceTone.MONO, colorFromArtwork = false,
+    )
+    AppStyle.SOFT -> copy(
+        seedColor = SOFT_PEACH, paletteStyle = PaletteStyleOption.TonalSpot, font = AppFont.OUTFIT,
+        titleFont = TitleFont.SAME, corners = CornerStyle.ROUND, surfaces = SurfaceTone.TINTED, colorFromArtwork = false,
+    )
+    AppStyle.VIVID -> copy(
+        seedColor = EMBER, paletteStyle = PaletteStyleOption.Vibrant, font = AppFont.SPACE_GROTESK,
+        titleFont = TitleFont.SAME, corners = CornerStyle.BALANCED, surfaces = SurfaceTone.TINTED, colorFromArtwork = true,
+    )
+    AppStyle.CUSTOM -> this
 }
 
 @Serializable
@@ -141,18 +193,23 @@ data class ThemeSettings(
     /** Material You wallpaper colors, on Android 12 and later. */
     val dynamicColor: Boolean = false,
     /** ARGB seed for the generated scheme when [dynamicColor] is off. */
-    val seedColor: Int = SEED_COLORS.first(),
+    val seedColor: Int = EMBER,
     val paletteStyle: PaletteStyleOption = PaletteStyleOption.TonalSpot,
     /** True black surfaces in dark mode, for OLED screens. */
     val pureBlack: Boolean = true,
     /** Re-seed the whole app from the playing track's artwork. */
     val colorFromArtwork: Boolean = true,
     val playerBackground: PlayerBackground = PlayerBackground.BLUR,
-    val font: AppFont = AppFont.SYSTEM,
+    val font: AppFont = AppFont.GEIST,
     val textWeight: TextWeight = TextWeight.MEDIUM,
     /** Private copied file ID, never an external storage path or URI. */
     val customFontId: String = "",
     val customFontName: String = "",
+    /** The look as a whole; see [effective]. */
+    val style: AppStyle = AppStyle.SIGNAL,
+    val titleFont: TitleFont = TitleFont.DOT_MATRIX,
+    val corners: CornerStyle = CornerStyle.BALANCED,
+    val surfaces: SurfaceTone = SurfaceTone.MONO,
 
     )
 
@@ -478,6 +535,8 @@ data class InterfaceSettings(
     val liquidGlass: Boolean = true,
     /** Draw the played part of the seek bar as a moving wave. */
     val wavySeekbar: Boolean = false,
+    /** In the dot-matrix looks, the seek bar drawn as a row of dots that light up as the song plays. */
+    val dotSeekbar: Boolean = true,
     /** How thick the seek bar's track is. */
     val seekbarThickness: SeekbarThickness = SeekbarThickness.REGULAR,
     /** What marks the place on the seek bar. */
@@ -525,7 +584,7 @@ data class InterfaceSettings(
     val lyricsTextScale: Float = 1f,
     val playerStyle: PlayerStyle = PlayerStyle.CLASSIC,
     val dockMotion: DockMotion = DockMotion.MINIMIZE,
-    val controlStyle: ControlStyle = ControlStyle.BLOOM,
+    val controlStyle: ControlStyle = ControlStyle.SIGNAL,
     /** The cover drifts and zooms slowly in the player while a song plays. */
     val movingCover: Boolean = true,
     /** One or two of Home's song and album cards drift and zoom the same way while the page sits still. */
@@ -669,6 +728,8 @@ enum class LyricsAlign(val label: String) {
 
 @Serializable
 data class LibrarySettings(
+    /** The languages picked on the welcome, by [com.tunelle.data.MusicLanguage] name, most important first. */
+    val musicLanguages: List<String> = emptyList(),
     /** A MediaStore relative path ("Music/"), or null for every folder. */
     val localFolder: String? = null,
     val filterNonMusic: Boolean = true,
@@ -712,6 +773,7 @@ enum class Recommender(val label: String, val summary: String) {
 /** How the player's back, play/pause and forward buttons look and move. */
 @Serializable
 enum class ControlStyle(val label: String, val summary: String) {
+    SIGNAL("Signal", "An accent play button ringed by dots that light up as the song plays, with crisp outlined skips"),
     BLOOM("Bloom", "Large bare glyphs; a soft light blooms behind each press and play folds into pause"),
     CAPSULE("Capsule", "Play stretches into a wide accent pill while it plays; the skips tilt as you tap"),
     ORBIT("Orbit", "Play sits inside the song's progress ring, with a comet of light circling while it plays"),
@@ -853,6 +915,8 @@ data class SettingsState(
 
 /** Accent choices offered when Material You is off. */
 val SEED_COLORS = listOf(
+    EMBER, // Tunelle's ember
+    0xFFC6F432.toInt(), // lime
     0xFFE53935.toInt(), // red
     0xFFFF6F00.toInt(), // amber
     0xFFFDD835.toInt(), // yellow
@@ -949,6 +1013,15 @@ object AppSettings {
     }
 
     fun updateTheme(t: (ThemeSettings) -> ThemeSettings) = update { it.copy(theme = t(it.theme)) }
+
+    /**
+     * Changes one part of the look (accent, palette, font, corners, titles,
+     * surfaces, colour from artwork). Under a built-in style this switches to
+     * [AppStyle.CUSTOM], starting from what that style showed, so nothing else jumps.
+     */
+    fun updateLook(t: (ThemeSettings) -> ThemeSettings) = updateTheme { theme ->
+        t(if (theme.style == AppStyle.CUSTOM) theme else theme.effective().copy(style = AppStyle.CUSTOM))
+    }
     fun updateSound(t: (SoundSettings) -> SoundSettings) = update { it.copy(sound = t(it.sound)) }
     fun updateEqualizer(t: (EqualizerSettings) -> EqualizerSettings) = update { it.copy(equalizer = t(it.equalizer)) }
     fun updatePlayback(t: (PlaybackSettings) -> PlaybackSettings) = update { it.copy(playback = t(it.playback)) }

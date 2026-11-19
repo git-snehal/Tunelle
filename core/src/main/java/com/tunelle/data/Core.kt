@@ -39,6 +39,8 @@ object Core {
             }
         })
         AppSettings.init(app)
+        // Each output's own sound: put in place before playback reads the equalizer.
+        com.tunelle.data.devicesound.DeviceSound.init(app)
         com.tunelle.data.config.RemoteConfig.init(app)
         com.tunelle.data.addons.AddonStore.init(app)
         com.tunelle.data.addons.AddonOutput.init(app)

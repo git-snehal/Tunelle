@@ -39,14 +39,12 @@ import com.tunelle.ui.components.SheetButton
 internal enum class AppIcon(val title: String, val resource: Int) {
     // The names are the launcher aliases in the manifest: kept as they are so a choice made
     // before carries over, whatever each is called on screen now.
-    Classic("Classic", R.mipmap.ic_launcher),
-    Midnight("Midnight", R.mipmap.ic_launcher_midnight),
-    Pearl("Pearl", R.mipmap.ic_launcher_pearl),
-    Rose("Sunset", R.mipmap.ic_launcher_rose),
-    Ocean("Ocean", R.mipmap.ic_launcher_ocean),
-    Aurora("Aurora", R.mipmap.ic_launcher_aurora),
-    Gold("Gold", R.mipmap.ic_launcher_gold),
-    Neon("Neon", R.mipmap.ic_launcher_neon);
+    Classic("Echo", R.mipmap.ic_launcher),
+    Midnight("Paper", R.mipmap.ic_launcher_midnight),
+    Pearl("Cream", R.mipmap.ic_launcher_pearl),
+    Rose("Ember", R.mipmap.ic_launcher_rose),
+    Ocean("Tunnel note", R.mipmap.ic_launcher_ocean),
+    Aurora("Tunnel note light", R.mipmap.ic_launcher_aurora);
 
     fun component(context: Context) = ComponentName(context, "${context.packageName}.icon.$name")
     companion object {

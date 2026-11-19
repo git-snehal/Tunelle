@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +38,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -107,6 +110,11 @@ fun PlayerControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         when (style) {
+            ControlStyle.SIGNAL -> {
+                SignalSkip(forward = false, previousRolls, enabled = true, animate, back)
+                SignalPlay(isPlaying, isBuffering, animate, playPause)
+                SignalSkip(forward = true, nextRolls, hasNext, animate, ahead)
+            }
             ControlStyle.ECHO -> {
                 BloomSkip(forward = false, previousRolls, enabled = true, animate, back)
                 EchoPlay(isPlaying, isBuffering, animate, playPause)
@@ -187,6 +195,79 @@ private fun EchoPlay(playing: Boolean, buffering: Boolean, animate: Boolean, onC
         contentAlignment = Alignment.Center,
     ) {
         PlayPauseGlyph(playing, ink, animate, Modifier.size(38.dp))
+    }
+}
+
+// ---- Signal ------------------------------------------------------------------
+
+/**
+ * Tunelle's own: a plain solid button, light on dark, and each press sends an
+ * echo out of it, three arches widening and fading one after another, the
+ * motion of the Echo mark. Progress lives round the cover's arch, not here.
+ */
+@Composable
+private fun SignalPlay(isPlaying: Boolean, isBuffering: Boolean, animate: Boolean, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val press = pressAmount(interaction.collectIsPressedAsState().value, animate)
+    val fill = MaterialTheme.colorScheme.onSurface
+    val ink = MaterialTheme.colorScheme.surface
+    val echo = remember { androidx.compose.animation.core.Animatable(1f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val spin = rememberEchoPhase(isBuffering && animate, 1_100)
+    Box(
+        Modifier.size(96.dp)
+            .drawBehind {
+                // The echo: arches standing on the button's foot, each a moment behind the last.
+                val e = echo.value
+                if (e < 1f) for (k in 0 until 3) {
+                    val t = ((e - k * 0.12f) / 0.76f).coerceIn(0f, 1f)
+                    if (t <= 0f || t >= 1f) continue
+                    val w = 70.dp.toPx() * (1f + 0.75f * t)
+                    val left = center.x - w / 2f
+                    val foot = center.y + 35.dp.toPx()
+                    val path = Path().apply {
+                        moveTo(left, foot)
+                        lineTo(left, foot - w / 2f)
+                        arcTo(androidx.compose.ui.geometry.Rect(left, foot - w, left + w, foot), 180f, 180f, false)
+                        lineTo(left + w, foot)
+                    }
+                    drawPath(path, (if (k == 0) com.tunelle.ui.components.EMBER else fill).copy(alpha = (1f - t) * 0.8f),
+                        style = Stroke((2.4f - k * 0.5f).dp.toPx(), cap = StrokeCap.Round))
+                }
+            }
+            .button(interaction, true, if (isPlaying) "Pause" else "Play") {
+                if (animate) scope.launch { echo.snapTo(0f); echo.animateTo(1f, tween(1_000, easing = LinearEasing)) }
+                onClick()
+            }
+            .semantics { if (isBuffering) stateDescription = "Buffering" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier.size(70.dp).graphicsLayer { val s = 1f - 0.08f * press; scaleX = s; scaleY = s }
+                .drawBehind {
+                    drawCircle(fill)
+                    if (isBuffering) drawArc(ink.copy(alpha = 0.5f), spin.value * 360f - 90f, 90f, false,
+                        topLeft = Offset(8.dp.toPx(), 8.dp.toPx()), size = Size(size.width - 16.dp.toPx(), size.height - 16.dp.toPx()),
+                        style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            PlayPauseGlyph(isPlaying, ink, animate, Modifier.size(32.dp))
+        }
+    }
+}
+
+/** A plain skip glyph; a soft disc grows behind it under the finger. */
+@Composable
+private fun SignalSkip(forward: Boolean, rolls: Int, enabled: Boolean, animate: Boolean, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val press = pressAmount(interaction.collectIsPressedAsState().value, animate)
+    val ink = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.35f)
+    Box(
+        Modifier.size(60.dp).drawBloom(press, MaterialTheme.colorScheme.onSurface, 0f).button(interaction, enabled, if (forward) "Next" else "Previous", onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        SkipGlyph(forward, rolls, ink, animate, Modifier.size(34.dp).graphicsLayer { val s = 1f - 0.14f * press; scaleX = s; scaleY = s })
     }
 }
 

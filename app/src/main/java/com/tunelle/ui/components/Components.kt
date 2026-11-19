@@ -348,7 +348,7 @@ fun SongListItem(
                 leading()
             } else {
                 Box(Modifier.size(52.dp)) {
-                    Artwork(song.thumbnailUrl.artworkAt(ROW_ART_PX), Modifier.fillMaxSize())
+                    Artwork(song.thumbnailUrl.artworkAt(ROW_ART_PX), Modifier.fillMaxSize(), com.tunelle.ui.theme.coverShape(MaterialTheme.shapes.small))
                     ListenedBar(song.videoId, Modifier.align(Alignment.BottomCenter))
                     if (isCurrent) {
                         Box(
@@ -397,7 +397,7 @@ internal fun SongPreview(song: Song) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Artwork(song.thumbnailUrl.artworkAt(ROW_ART_PX), Modifier.size(52.dp))
+        Artwork(song.thumbnailUrl.artworkAt(ROW_ART_PX), Modifier.size(52.dp), com.tunelle.ui.theme.coverShape(MaterialTheme.shapes.small))
         Column(Modifier.weight(1f)) {
             Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             SubtitleLine(listOfNotNull(song.artist.takeIf { it.isNotBlank() }, song.durationText).joinToString(" • "), explicit = song.isExplicit == true)
@@ -456,10 +456,12 @@ private fun ColumnScope.ItemCardBody(
     onArtLoaded: ((Boolean) -> Unit)?,
 ) {
     val round = type == BrowseType.ARTIST
+    // Signal: artists stand in a tall arch, like a portrait in a doorway; elsewhere a circle.
+    val arch = round && com.tunelle.ui.theme.LocalDotTitles.current
     Artwork(
         thumbnailUrl.artworkAt(CARD_ART_PX),
-        Modifier.fillMaxWidth().aspectRatio(1f),
-        shape = if (round) CircleShape else MaterialTheme.shapes.medium,
+        Modifier.fillMaxWidth().aspectRatio(if (arch) 0.82f else 1f),
+        shape = if (arch) com.tunelle.ui.theme.ArchShape(14.dp) else if (round) CircleShape else MaterialTheme.shapes.medium,
         placeholder = when (type) {
             BrowseType.ARTIST -> Icons.Filled.Person
             BrowseType.ALBUM -> Icons.Filled.Album
@@ -545,15 +547,42 @@ fun SectionHeader(
         modifier = modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
+        if (com.tunelle.ui.theme.LocalDotTitles.current) Column(Modifier.weight(1f)) {
+            // Signal: a quiet mono label instead of a headline, the content does the talking.
+            Text(
+                com.tunelle.ui.theme.tr(title).uppercase(),
+                fontFamily = com.tunelle.ui.theme.GeistMono,
+                fontSize = 12.sp,
+                letterSpacing = 1.6.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    com.tunelle.ui.theme.tr(subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        } else Column(Modifier.weight(1f)) {
             if (!subtitle.isNullOrBlank()) {
                 Text(
                     com.tunelle.ui.theme.tr(subtitle).uppercase(),
                     style = MaterialTheme.typography.labelMedium,
+                    letterSpacing = 1.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(com.tunelle.ui.theme.tr(title), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The dot-matrix looks lead each section with a point of the accent, like a status light.
+                Text(com.tunelle.ui.theme.tr(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
         action?.invoke()
     }

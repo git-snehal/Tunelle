@@ -47,7 +47,7 @@ import com.tunelle.ui.player.rememberOutputRoute
  * full signal path. Cast and the pipeline each open their own sheet.
  */
 @Composable
-fun AudioOutputSheet(onDismiss: () -> Unit, onCast: () -> Unit, onPipeline: () -> Unit) {
+fun AudioOutputSheet(onDismiss: () -> Unit, onCast: () -> Unit, onPipeline: () -> Unit, onEqualizer: (() -> Unit)? = null) {
     val route = rememberOutputRoute()
     val haptics = rememberHaptics()
     // The device itself, not the line about it: that line is in the app's language.
@@ -55,7 +55,7 @@ fun AudioOutputSheet(onDismiss: () -> Unit, onCast: () -> Unit, onPipeline: () -
     val output = rememberOutputDeviceName()
     val deviceName = castSession?.target?.name ?: output.ifBlank { "This phone" }
     val casting = castingTo()
-    FloatingCard(onDismiss = onDismiss, title = "Audio output", icon = Icons.Rounded.Speaker) {
+    FloatingCard(onDismiss = onDismiss, title = "Output and sound", icon = Icons.Rounded.Speaker, expandable = true, startExpanded = true) {
         Column(Modifier.padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             OutputRow(
                 icon = if (route == OutputRoute.CAST) Icons.Rounded.Smartphone else route.icon,
@@ -76,6 +76,8 @@ fun AudioOutputSheet(onDismiss: () -> Unit, onCast: () -> Unit, onPipeline: () -
                 subtitle = "Live signal path, decoder to output",
                 chevron = true,
             ) { haptics.tick(); onPipeline() }
+            // Tune the sound for wherever it's playing, right here.
+            if (casting == null) com.tunelle.ui.settings.QuickSound(onEqualizer, Modifier.padding(top = 6.dp))
         }
     }
 }

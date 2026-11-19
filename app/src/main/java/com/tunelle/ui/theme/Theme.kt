@@ -17,6 +17,8 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +34,10 @@ import com.materialkolor.rememberDynamicColorScheme
 import com.tunelle.data.settings.PaletteStyleOption
 import com.tunelle.data.settings.ThemeMode
 import com.tunelle.data.settings.ThemeSettings
+import com.tunelle.data.settings.CornerStyle
+import com.tunelle.data.settings.SurfaceTone
+import com.tunelle.data.settings.TitleFont
+import com.tunelle.data.settings.effective
 
 @Composable
 fun ThemeSettings.isDark(): Boolean = when (mode) {
@@ -50,6 +56,9 @@ fun PaletteStyleOption.toPaletteStyle(): PaletteStyle = PaletteStyle.valueOf(nam
  */
 /** The colour read from the playing song's cover, or null with nothing playing; set whatever the theme follows. */
 val LocalArtworkSeed = compositionLocalOf<Color?> { null }
+
+/** True when the style sets big titles and numbers in dot matrix, for numbers drawn outside the type scale. */
+val LocalDotTitles = androidx.compose.runtime.staticCompositionLocalOf { false }
 
 /**
  * The playing song's own accent pair (primary, tertiary) from a scheme seeded
@@ -78,15 +87,16 @@ fun TunelleTheme(
     artworkSeed: Color? = null,
     content: @Composable () -> Unit,
 ) {
+    val look = settings.effective()
     val dark = settings.isDark()
-    val seed = artworkSeed?.takeIf { settings.colorFromArtwork }
-    val useWallpaper = seed == null && settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val seed = artworkSeed?.takeIf { look.colorFromArtwork }
+    val useWallpaper = seed == null && look.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     val generated = rememberDynamicColorScheme(
-        seedColor = seed ?: Color(settings.seedColor),
+        seedColor = seed ?: Color(look.seedColor),
         isDark = dark,
-        isAmoled = settings.pureBlack,
-        style = settings.paletteStyle.toPaletteStyle(),
+        isAmoled = look.pureBlack,
+        style = look.paletteStyle.toPaletteStyle(),
     )
     val base = if (useWallpaper) {
         val context = LocalContext.current
@@ -94,15 +104,23 @@ fun TunelleTheme(
     } else {
         generated
     }
-    val scheme = if (dark && settings.pureBlack) base.toPureBlack() else base
+    val toned = when {
+        dark && look.pureBlack -> base.toPureBlack()
+        look.surfaces == SurfaceTone.MONO -> base.toNeutral(dark)
+        else -> base
+    }
+    // Neutral looks (Signal) show the accent exactly as picked, ember stays ember in light and
+    // dark alike, instead of the tonal palette's darker or paler stand-in for it.
+    val scheme = if (look.surfaces == SurfaceTone.MONO && seed == null && !useWallpaper) toned.withExactAccent(Color(look.seedColor)) else toned
 
     MaterialTheme(
         colorScheme = scheme.animated(),
         typography = rememberAppTypography(settings),
-        shapes = AppShapes,
+        shapes = shapesFor(look.corners),
     ) {
         CompositionLocalProvider(
             LocalArtworkSeed provides artworkSeed,
+            LocalDotTitles provides (look.titleFont == TitleFont.DOT_MATRIX),
             com.tunelle.ui.components.LocalFocusRingColor provides MaterialTheme.colorScheme.primary,
             content = content,
         )
@@ -132,9 +150,9 @@ fun PlayerTheme(seed: Color?, settings: ThemeSettings, neutral: Boolean = false,
     MaterialTheme(
         colorScheme = if (!active) MaterialTheme.colorScheme else if (amoled) playerScheme.toPureBlack() else playerScheme.animated(),
         typography = rememberAppTypography(settings),
-        shapes = AppShapes,
+        shapes = shapesFor(settings.effective().corners),
     ) {
-        content()
+        CompositionLocalProvider(LocalDotTitles provides (settings.effective().titleFont == TitleFont.DOT_MATRIX), content = content)
     }
 }
 
@@ -156,6 +174,60 @@ private fun ColorScheme.toPureBlack(): ColorScheme = copy(
     onSurfaceVariant = Color(0xFF9A9AA0),
     outline = Color(0xFF4A4A4F),
     outlineVariant = Color(0xFF2E2E32),
+)
+
+/**
+ * The accent as picked for primary, with readable ink on it, and a soft wash of it
+ * for containers. Text on the accent goes black or white by the accent's lightness.
+ */
+private fun ColorScheme.withExactAccent(accent: Color): ColorScheme {
+    val ink = if (accent.luminance() > 0.45f) Color(0xFF111112) else Color.White
+    return copy(
+        primary = accent,
+        onPrimary = ink,
+        primaryContainer = accent.copy(alpha = 0.18f).compositeOver(surface),
+        onPrimaryContainer = onSurface,
+        inversePrimary = accent,
+        surfaceTint = accent,
+    )
+}
+
+/**
+ * Neutral backgrounds and cards for the Signal look: white and light greys,
+ * or near-black and dark greys, so the accent is the only colour on screen.
+ */
+private fun ColorScheme.toNeutral(dark: Boolean): ColorScheme = if (dark) copy(
+    background = Color(0xFF0B0B0C),
+    surface = Color(0xFF0B0B0C),
+    surfaceVariant = Color(0xFF26262A),
+    surfaceContainerLowest = Color(0xFF070708),
+    surfaceContainerLow = Color(0xFF121214),
+    surfaceContainer = Color(0xFF19191B),
+    surfaceContainerHigh = Color(0xFF222225),
+    surfaceContainerHighest = Color(0xFF2C2C30),
+    onSurface = Color(0xFFF4F4F5),
+    onBackground = Color(0xFFF4F4F5),
+    onSurfaceVariant = Color(0xFFA1A1A8),
+    outline = Color(0xFF505056),
+    outlineVariant = Color(0xFF303035),
+    secondaryContainer = Color(0xFF2C2C30),
+    onSecondaryContainer = Color(0xFFF4F4F5),
+) else copy(
+    background = Color(0xFFF7F7F6),
+    surface = Color(0xFFF7F7F6),
+    surfaceVariant = Color(0xFFE6E6E4),
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFF1F1EF),
+    surfaceContainer = Color(0xFFECECEA),
+    surfaceContainerHigh = Color(0xFFE5E5E3),
+    surfaceContainerHighest = Color(0xFFDDDDDA),
+    onSurface = Color(0xFF111112),
+    onBackground = Color(0xFF111112),
+    onSurfaceVariant = Color(0xFF5E5E63),
+    outline = Color(0xFF8A8A8F),
+    outlineVariant = Color(0xFFCFCFCC),
+    secondaryContainer = Color(0xFFE2E2E0),
+    onSecondaryContainer = Color(0xFF111112),
 )
 
 /** The scheme with every colour easing to its new value, so a change of seed fades rather than snaps. */
@@ -244,6 +316,69 @@ val AppShapes = Shapes(
     extraLarge = RoundedCornerShape(32.dp),
 )
 
+private val CrispShapes = Shapes(
+    extraSmall = RoundedCornerShape(3.dp),
+    small = RoundedCornerShape(6.dp),
+    medium = RoundedCornerShape(10.dp),
+    large = RoundedCornerShape(14.dp),
+    extraLarge = RoundedCornerShape(20.dp),
+)
+
+private val RoundShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(24.dp),
+    large = RoundedCornerShape(32.dp),
+    extraLarge = RoundedCornerShape(42.dp),
+)
+
+fun shapesFor(corners: CornerStyle): Shapes = when (corners) {
+    CornerStyle.CRISP -> CrispShapes
+    CornerStyle.BALANCED -> AppShapes
+    CornerStyle.ROUND -> RoundShapes
+}
+
+/**
+ * Space Grotesk, Tunelle's text face: a technical grotesque with a little character
+ * (SIL Open Font License; see third_party/space-grotesk). One variable file.
+ */
+@OptIn(ExperimentalTextApi::class)
+val SpaceGrotesk = FontFamily(
+    listOf(300, 400, 500, 600, 700).map { w ->
+        Font(R.font.space_grotesk_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+/**
+ * Geist, the Signal look's text face: a clean, modern grotesque made for screens
+ * (SIL Open Font License; see third_party/geist). One variable file.
+ */
+@OptIn(ExperimentalTextApi::class)
+val Geist = FontFamily(
+    listOf(300, 400, 500, 600, 700).map { w ->
+        Font(R.font.geist_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+/** Geist Mono, for the small uppercase labels over sections in the Signal look. */
+@OptIn(ExperimentalTextApi::class)
+val GeistMono = FontFamily(
+    listOf(400, 500).map { w ->
+        Font(R.font.geist_mono_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
+/**
+ * Doto, a dot-matrix face for small numbers in the Signal look (the date, song times)
+ * (SIL Open Font License; see third_party/doto). Set heavy so the dots read.
+ */
+@OptIn(ExperimentalTextApi::class)
+val DotMatrix = FontFamily(
+    listOf(500, 700, 800, 900).map { w ->
+        Font(R.font.doto_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
+    },
+)
+
 @Composable
 fun rememberSeedSwatches(colors: List<Int>): List<Color> = remember(colors) { colors.map { Color(it) } }
 
@@ -251,8 +386,11 @@ fun rememberSeedSwatches(colors: List<Int>): List<Color> = remember(colors) { co
 @Composable
 internal fun rememberAppFont(settings: ThemeSettings): FontFamily {
     val context = LocalContext.current
-    return remember(settings.font, settings.customFontId) {
-        when (settings.font) {
+    val font = settings.effective().font
+    return remember(font, settings.customFontId) {
+        when (font) {
+            com.tunelle.data.settings.AppFont.GEIST -> Geist
+            com.tunelle.data.settings.AppFont.SPACE_GROTESK -> SpaceGrotesk
             com.tunelle.data.settings.AppFont.SYSTEM -> FontFamily.SansSerif
             com.tunelle.data.settings.AppFont.OUTFIT -> Outfit
             com.tunelle.data.settings.AppFont.SERIF -> FontFamily.Serif
@@ -268,12 +406,16 @@ internal fun rememberAppFont(settings: ThemeSettings): FontFamily {
 @Composable
 private fun rememberAppTypography(settings: ThemeSettings): Typography {
     val family = rememberAppFont(settings)
-    return remember(family, settings.textWeight) {
+    val dots = settings.effective().titleFont == TitleFont.DOT_MATRIX
+    return remember(family, settings.textWeight, dots) {
         fun TextStyle.readable() = copy(fontFamily = family,
             fontWeight = FontWeight(maxOf(fontWeight?.weight ?: 400, settings.textWeight.minimum)))
+        // Signal: big titles in the text face, medium weight and set tight, like an
+        // editorial headline. The dot face is kept for small numbers, drawn by hand.
+        fun TextStyle.title(spacing: Float) = if (!dots) readable() else copy(fontFamily = family, fontWeight = FontWeight.Medium, letterSpacing = spacing.sp)
         AppTypography.run { copy(
-            displayLarge = displayLarge.readable(), displayMedium = displayMedium.readable(), displaySmall = displaySmall.readable(),
-            headlineLarge = headlineLarge.readable(), headlineMedium = headlineMedium.readable(), headlineSmall = headlineSmall.readable(),
+            displayLarge = displayLarge.title(-1.8f), displayMedium = displayMedium.title(-1.5f), displaySmall = displaySmall.title(-1.2f),
+            headlineLarge = headlineLarge.title(-0.9f), headlineMedium = headlineMedium.title(-0.6f), headlineSmall = headlineSmall.title(-0.3f),
             titleLarge = titleLarge.readable(), titleMedium = titleMedium.readable(), titleSmall = titleSmall.readable(),
             bodyLarge = bodyLarge.readable(), bodyMedium = bodyMedium.readable(), bodySmall = bodySmall.readable(),
             labelLarge = labelLarge.readable(), labelMedium = labelMedium.readable(), labelSmall = labelSmall.readable(),

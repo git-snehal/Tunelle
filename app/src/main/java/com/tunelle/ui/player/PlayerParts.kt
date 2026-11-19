@@ -80,6 +80,8 @@ import com.tunelle.ui.theme.rememberArtworkSeed
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.tunelle.ui.components.glass
 import androidx.compose.runtime.snapshotFlow
@@ -804,6 +806,13 @@ fun ArtworkPane(
     canvasShowing: Boolean = false,
     /** How round the cover's corners are. */
     corner: androidx.compose.ui.unit.Dp = 28.dp,
+    /**
+     * Signal's player: the cover in an arch, with the song's progress running round
+     * it ([progress], 0..1). Dragging along the arch seeks ([onSeek], 0..1).
+     */
+    arch: Boolean = false,
+    progress: () -> Float = { 0f },
+    onSeek: ((Float) -> Unit)? = null,
 ) {
     val coverShown by animateFloatAsState(if (canvasShowing) 0f else 1f, tween(450), label = "coverOverCanvas")
     val scale by animateFloatAsState(
@@ -818,9 +827,70 @@ fun ArtworkPane(
     val scope = rememberCoroutineScope()
     val threshold = with(LocalDensity.current) { 96.dp.toPx() }
 
+    // The arch's track and where the cover sits inside this pane, for drawing and seeking.
+    var paneCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+    var coverCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+    var dragT by remember { mutableStateOf<Float?>(null) }
+    val trackGap = 13.dp
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    fun track(): com.tunelle.ui.theme.ArchTrack? {
+        val p = paneCoords ?: return null
+        val c = coverCoords ?: return null
+        if (!p.isAttached || !c.isAttached) return null
+        return com.tunelle.ui.theme.ArchTrack(p.localBoundingBoxOf(c, clipBounds = false), with(density) { trackGap.toPx() })
+    }
+    val trackInk = MaterialTheme.colorScheme.onSurface
+    val seekHaptics = com.tunelle.ui.components.rememberHaptics()
     Box(
         modifier
             .fillMaxWidth()
+            .then(if (!arch) Modifier else Modifier
+                .onGloballyPositioned { paneCoords = it }
+                // Seen before the cover's own gestures: a touch near the track seeks; anywhere
+                // else is left alone, so swiping the cover and double-tapping still work.
+                .pointerInput(onSeek) {
+                    val seek = onSeek ?: return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        val t = track() ?: return@awaitEachGesture
+                        val (start, distance) = t.nearest(down.position)
+                        if (distance > 26.dp.toPx()) return@awaitEachGesture
+                        down.consume()
+                        dragT = start
+                        seekHaptics.tick()
+                        while (true) {
+                            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) { change.consume(); break }
+                            val next = t.nearest(change.position).first
+                            if (((dragT ?: 0f) * 20).toInt() != (next * 20).toInt()) seekHaptics.tick()
+                            dragT = next
+                            change.consume()
+                        }
+                        dragT?.let(seek)
+                        dragT = null
+                    }
+                }
+                // The track round the cover: all of it faintly, the part played brightly, the place in ember.
+                .drawWithContent {
+                    drawContent()
+                    val t = track() ?: return@drawWithContent
+                    val stroke = 3.dp.toPx()
+                    val path = t.path()
+                    drawPath(path, trackInk.copy(alpha = 0.14f), style = Stroke(stroke, cap = StrokeCap.Round))
+                    val f = (dragT ?: progress()).coerceIn(0f, 1f)
+                    if (f > 0f) {
+                        val played = Path()
+                        android.graphics.PathMeasure(path.asAndroidPath(), false).let { m ->
+                            val out = android.graphics.Path()
+                            m.getSegment(0f, m.length * f, out, true)
+                            played.asAndroidPath().set(out)
+                        }
+                        drawPath(played, trackInk, style = Stroke(stroke, cap = StrokeCap.Round))
+                    }
+                    val head = t.at(f)
+                    drawCircle(com.tunelle.ui.components.EMBER, radius = if (dragT != null) 9.dp.toPx() else 6.dp.toPx(), center = head)
+                })
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragEnd = {
@@ -848,7 +918,9 @@ fun ArtworkPane(
                     // tall as the room. Forcing the full width made a square that spilled over
                     // "Playing from" and the title on screens where the controls take more height.
                     Modifier
-                        .aspectRatio(1f)
+                        // In the arch, a little taller than wide, and inset so its track fits round it.
+                        .then(if (arch) Modifier.padding(horizontal = trackGap + 6.dp).padding(top = trackGap + 6.dp).aspectRatio(0.84f)
+                            .onGloballyPositioned { coverCoords = it } else Modifier.aspectRatio(1f))
                         .then(motion)
                         .then(with(com.tunelle.ui.components.PlayerMorph) { Modifier.playerLanding() })
                         .graphicsLayer {
@@ -862,12 +934,12 @@ fun ArtworkPane(
                             shadowElevation = 16.dp.toPx()
                             ambientShadowColor = Color.Black.copy(alpha = 0.22f)
                             spotShadowColor = Color.Black.copy(alpha = 0.16f)
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(corner)
+                            shape = if (arch) com.tunelle.ui.theme.ArchShape(18.dp) else androidx.compose.foundation.shape.RoundedCornerShape(corner)
                             clip = true
                             // Hidden under the morphing cover while it grows in or shrinks away.
                             alpha = if (com.tunelle.ui.components.PlayerMorph.coverAway) 0f else 1f
                         },
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(corner),
+                    shape = if (arch) com.tunelle.ui.theme.ArchShape(18.dp) else androidx.compose.foundation.shape.RoundedCornerShape(corner),
                     imageModifier = Modifier.livingArt(isPlaying, moving, artworkMotion),
                 ) {
                     // Only on the playing song's cover, not on one leaving as the song changes.
@@ -1009,6 +1081,10 @@ fun SeekBar(
     /** Where the song's parts (verse, chorus) begin, in ms, marked as small gaps in the track. */
     marks: List<Long> = emptyList(),
     quality: (@Composable () -> Unit)? = null,
+    /** The track as a row of dots that light up as the song plays, as on a dot-matrix display. */
+    dotted: Boolean = false,
+    /** Only the times and quality, when the progress is drawn elsewhere (round Signal's arch). */
+    hideTrack: Boolean = false,
 ) {
     var dragFraction by remember { mutableStateOf<Float?>(null) }
     // Where the finger let go (or tapped), held until the player has got there: the seek takes
@@ -1072,7 +1148,7 @@ fun SeekBar(
     val focusRing = MaterialTheme.colorScheme.primary
 
     Column(modifier) {
-        Box {
+        if (!hideTrack) Box {
             if (lyricAt != null) ScrubLyric(dragFraction, durationMs, lyricAt)
             Canvas(
                 Modifier
@@ -1135,7 +1211,7 @@ fun SeekBar(
                 // Under the wave, the straight track starts where the played part ends: drawn the
                 // whole way along, it showed as a flat line behind the wave.
                 val trackFrom = if (amplitude > 0f && sweep == null) (size.width * f + h * 1.5f * amplitude).coerceAtMost(size.width) else 0f
-                if (trackFrom < size.width) drawRoundRect(inactive, Offset(trackFrom, y), Size(size.width - trackFrom, h), r)
+                if (!dotted && trackFrom < size.width) drawRoundRect(inactive, Offset(trackFrom, y), Size(size.width - trackFrom, h), r)
                 if (sweep != null) {
                     val at = sweep.value * size.width
                     val band = size.width * 0.25f
@@ -1146,6 +1222,24 @@ fun SeekBar(
                     return@Canvas
                 }
                 val bufferedTo = size.width * maxOf(b, f)
+                if (dotted) {
+                    // A row of dots, evenly spaced from end to end: played ones lit in the
+                    // accent and a little larger, loaded ones brighter than those still to load.
+                    val gap = 7.dp.toPx()
+                    val count = (size.width / gap).toInt().coerceAtLeast(2)
+                    val step = size.width / count
+                    val small = (h * 0.42f).coerceAtLeast(1.4.dp.toPx())
+                    val big = small * 1.45f
+                    for (i in 0..count) {
+                        val x = i * step
+                        val at = Offset(x, size.height / 2)
+                        when {
+                            x <= size.width * f -> drawCircle(if (gradient) androidx.compose.ui.graphics.lerp(active, gradientEnd, x / size.width) else active, big, at)
+                            x <= bufferedTo -> drawCircle(bufferedColor, small, at)
+                            else -> drawCircle(inactive, small, at)
+                        }
+                    }
+                } else {
                 if (bufferedTo > trackFrom) drawRoundRect(bufferedColor, Offset(trackFrom, y), Size(bufferedTo - trackFrom, h), r)
                 if (amplitude > 0f) {
                     // Played part as a sine wave, a stroke as thick as the track.
@@ -1174,14 +1268,21 @@ fun SeekBar(
                 } else {
                     drawRoundRect(active, Offset(0f, y), Size(size.width * f, h), r)
                 }
+                }
                 // A small dot where each part of the song still to come begins. Ones already
                 // played aren't drawn: cut into the played line (the wave above all) they read as breaks.
                 if (durationMs > 0) {
                     val played = size.width * f
                     val clear = maxOf(thumbRadius.toPx(), h) + 2.dp.toPx()
+                    // On the dotted bar a mark lights the dot nearest it, so it stays on the grid.
+                    val grid = if (dotted) size.width / (size.width / 7.dp.toPx()).toInt().coerceAtLeast(2) else 0f
                     shownMarks.forEach { ms ->
-                        val x = size.width * (ms.toFloat() / durationMs)
-                        if (x > played + clear && x < size.width - h) drawCircle(markDot, h * 0.32f, Offset(x, size.height / 2))
+                        val raw = size.width * (ms.toFloat() / durationMs)
+                        val x = if (dotted) kotlin.math.round(raw / grid) * grid else raw
+                        if (x > played + clear && x < size.width - h) {
+                            if (dotted) drawCircle(markDot, (h * 0.42f).coerceAtLeast(1.4.dp.toPx()) * 1.45f, Offset(x, size.height / 2))
+                            else drawCircle(markDot, h * 0.32f, Offset(x, size.height / 2))
+                        }
                     }
                 }
                 if (thumbRadius > 0.dp) {
@@ -1203,7 +1304,10 @@ fun SeekBar(
             derivedStateOf { (((dragFraction ?: heldFraction)?.times(durationMs)?.toLong() ?: position()) / 1000) }
         }
         if (look.seekbarTime != com.tunelle.data.settings.SeekbarTime.HIDDEN) {
-            val timeStyle = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
+            // In the Signal look the clock reads like a dot-matrix display.
+            val timeStyle = if (com.tunelle.ui.theme.LocalDotTitles.current)
+                MaterialTheme.typography.labelMedium.copy(fontFamily = com.tunelle.ui.theme.DotMatrix, fontWeight = androidx.compose.ui.text.font.FontWeight.Black, fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp), letterSpacing = androidx.compose.ui.unit.TextUnit(0.6f, androidx.compose.ui.unit.TextUnitType.Sp))
+            else MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
             val measurer = androidx.compose.ui.text.rememberTextMeasurer()
             val density = LocalDensity.current
             // Reserve identical, stable side columns using the whole track's length.
