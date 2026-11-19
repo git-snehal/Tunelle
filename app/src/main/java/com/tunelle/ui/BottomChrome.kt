@@ -796,6 +796,8 @@ private fun DockPill(
             tween(260, easing = FastOutSlowInEasing),
             label = "lensAlpha"
         )
+        val signalDock = com.tunelle.ui.theme.LocalDotTitles.current
+        val signalAccent = MaterialTheme.colorScheme.primary
         Box(
             Modifier
                 .layout { measurable, constraints ->
@@ -827,11 +829,14 @@ private fun DockPill(
                         scaleY = lensScale
                     }
                     .clip(LENS_SHAPE)
-                    .background(Brush.verticalGradient(listOf(ink.lensTop, ink.lensBottom)))
-                    .border(
-                        1.dp,
-                        Brush.verticalGradient(listOf(ink.rimTop, ink.rimBottom)),
-                        LENS_SHAPE
+                    .then(
+                        // Signal: a crisp outline in the accent over a faint wash, not a glass lens.
+                        if (signalDock) Modifier
+                            .background(signalAccent.copy(alpha = 0.12f))
+                            .border(1.5.dp, signalAccent.copy(alpha = 0.85f), LENS_SHAPE)
+                        else Modifier
+                            .background(Brush.verticalGradient(listOf(ink.lensTop, ink.lensBottom)))
+                            .border(1.dp, Brush.verticalGradient(listOf(ink.rimTop, ink.rimBottom)), LENS_SHAPE),
                     ),
             )
             Row(Modifier.fillMaxSize()) {
@@ -886,11 +891,12 @@ internal fun DockItem(
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
         when {
-            pressed -> 0.9f
-            selected -> 1.06f
+            pressed -> 0.86f
+            selected -> 1.08f
             else -> 1f
         },
-        spring(dampingRatio = 0.85f, stiffness = 320f),
+        // A quick pop that overshoots a touch and settles, so a tab feels picked.
+        if (selected && !pressed) spring(dampingRatio = 0.42f, stiffness = 520f) else spring(dampingRatio = 0.85f, stiffness = 420f),
         label = "dockScale",
     )
     val ink = dockInk()
@@ -995,7 +1001,7 @@ internal fun SearchOrb(selected: Boolean, modifier: Modifier = Modifier, onLongP
             .semantics { role = Role.Tab; this.selected = selected },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Rounded.Search, "Search", tint = fg, modifier = Modifier.size(26.dp))
+        Icon(if (selected) com.tunelle.ui.theme.TunelleIcons.SearchOpen else com.tunelle.ui.theme.TunelleIcons.Search, "Search", tint = fg, modifier = Modifier.size(26.dp))
     }
 }
 

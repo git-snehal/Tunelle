@@ -1224,7 +1224,7 @@ fun PlayerLayout(
                             val lyricAt: ((Long) -> String?)? = if (state.ui.lyricScrubPreview && synced != null) {
                                 { ms -> synced.lines.lastOrNull { it.startMs <= ms + offsetMs }?.text?.takeIf { it.isNotBlank() } }
                             } else null
-                            SeekBar(position, buffered, state.durationMs, onSeek = actions.seekTo, wavy = state.ui.wavySeekbar && !state.ui.reduceAnimation && !apple, playing = state.isPlaying, lyricAt = lyricAt, marks = marks, quality = { if (state.ui.sourcePill) SourceQualityBadge(current.videoId, state.audioFormat, onClick = { showSignal = true }) })
+                            SeekBar(position, buffered, state.durationMs, onSeek = actions.seekTo, wavy = state.ui.wavySeekbar && !state.ui.reduceAnimation && !apple, playing = state.isPlaying, dotted = state.ui.dotSeekbar && !state.ui.wavySeekbar && com.tunelle.ui.theme.LocalDotTitles.current, lyricAt = lyricAt, marks = marks, quality = { if (state.ui.sourcePill) SourceQualityBadge(current.videoId, state.audioFormat, onClick = { showSignal = true }) })
                             if (state.ui.statsForNerds) {
                                 Box(Modifier.fillMaxWidth().clickable { showSignal = true }) { NerdStatsLine(state.audioFormat) }
                             }

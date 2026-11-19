@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -107,6 +109,11 @@ fun PlayerControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         when (style) {
+            ControlStyle.SIGNAL -> {
+                SignalSkip(forward = false, previousRolls, enabled = true, animate, back)
+                SignalPlay(isPlaying, isBuffering, animate, progress, playPause)
+                SignalSkip(forward = true, nextRolls, hasNext, animate, ahead)
+            }
             ControlStyle.ECHO -> {
                 BloomSkip(forward = false, previousRolls, enabled = true, animate, back)
                 EchoPlay(isPlaying, isBuffering, animate, playPause)
@@ -187,6 +194,72 @@ private fun EchoPlay(playing: Boolean, buffering: Boolean, animate: Boolean, onC
         contentAlignment = Alignment.Center,
     ) {
         PlayPauseGlyph(playing, ink, animate, Modifier.size(38.dp))
+    }
+}
+
+// ---- Signal ------------------------------------------------------------------
+
+/** How many dots ring the Signal play button. */
+private const val SIGNAL_DOTS = 32
+
+/**
+ * Tunelle's own: a solid accent button inside a ring of dots. The dots light
+ * up one by one as the song plays, like a dot-matrix progress display, and
+ * while loading a short run of them chases round.
+ */
+@Composable
+private fun SignalPlay(isPlaying: Boolean, isBuffering: Boolean, animate: Boolean, progress: () -> Float, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val press = pressAmount(interaction.collectIsPressedAsState().value, animate)
+    val accent = MaterialTheme.colorScheme.primary
+    val ink = MaterialTheme.colorScheme.onPrimary
+    val dim = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
+    val chase = rememberEchoPhase(isBuffering && animate, 900)
+    Box(
+        Modifier.size(92.dp)
+            .drawBehind {
+                val ring = size.minDimension / 2f - 3.dp.toPx()
+                val lit = (progress().coerceIn(0f, 1f) * SIGNAL_DOTS).toInt()
+                val head = (chase.value * SIGNAL_DOTS).toInt()
+                for (i in 0 until SIGNAL_DOTS) {
+                    val angle = Math.toRadians(i * 360.0 / SIGNAL_DOTS - 90.0)
+                    val at = Offset(center.x + ring * kotlin.math.cos(angle).toFloat(), center.y + ring * kotlin.math.sin(angle).toFloat())
+                    val on = if (isBuffering) ((i - head + SIGNAL_DOTS) % SIGNAL_DOTS) < 6 else i < lit
+                    drawCircle(if (on) accent else dim, radius = if (on) 2.4.dp.toPx() else 1.7.dp.toPx(), center = at)
+                }
+            }
+            .button(interaction, true, if (isPlaying) "Pause" else "Play", onClick)
+            .semantics { if (isBuffering) stateDescription = "Buffering" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier.size(70.dp).graphicsLayer { val s = 1f - 0.08f * press; scaleX = s; scaleY = s }
+                .drawBehind { drawCircle(accent) },
+            contentAlignment = Alignment.Center,
+        ) {
+            PlayPauseGlyph(isPlaying, ink, animate, Modifier.size(34.dp))
+        }
+    }
+}
+
+/** A skip in a crisp outlined square, which fills faintly under the finger. */
+@Composable
+private fun SignalSkip(forward: Boolean, rolls: Int, enabled: Boolean, animate: Boolean, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val press = pressAmount(interaction.collectIsPressedAsState().value, animate)
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val ink = onSurface.copy(alpha = if (enabled) 1f else 0.35f)
+    val shape = MaterialTheme.shapes.large
+    Box(
+        Modifier.size(60.dp)
+            .graphicsLayer { val s = 1f - 0.06f * press; scaleX = s; scaleY = s }
+            .clip(shape)
+            .drawBehind { drawRect(onSurface.copy(alpha = 0.04f + 0.10f * press)) }
+            .border(1.dp, onSurface.copy(alpha = if (enabled) 0.22f else 0.1f), shape)
+            .button(interaction, enabled, if (forward) "Next" else "Previous", onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        SkipGlyph(forward, rolls, ink, animate, Modifier.size(30.dp))
     }
 }
 

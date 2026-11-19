@@ -1308,6 +1308,11 @@ private fun settingsSections(
                 Entry("Match background to cover", "background colour seamless") {
                     ToggleRow("Match background to cover", ui.coverColorBackground, { v -> AppSettings.updateUi { it.copy(coverColorBackground = v) } }, summary = "Paints the player's background in the cover's own colour, so the full-screen cover blends into it", icon = Icons.Rounded.Palette)
                 },
+                Entry("Dot seek bar", "dot matrix dotted progress slider seek bar signal") {
+                    ToggleRow("Dot seek bar", ui.dotSeekbar, { v -> AppSettings.updateUi { it.copy(dotSeekbar = v) } },
+                        summary = "In styles with dot-matrix titles, the bar is a row of dots that light up as the song plays",
+                        icon = Icons.Rounded.MoreHoriz)
+                },
                 Entry("Wavy seek bar", "wave progress slider") {
                     // The Apple Music inspired player keeps its bar plain, so there it's shown off and can't be turned on.
                     val appleStyle = ui.playerStyle == PlayerStyle.APPLE_MUSIC

@@ -1009,6 +1009,8 @@ fun SeekBar(
     /** Where the song's parts (verse, chorus) begin, in ms, marked as small gaps in the track. */
     marks: List<Long> = emptyList(),
     quality: (@Composable () -> Unit)? = null,
+    /** The track as a row of dots that light up as the song plays, as on a dot-matrix display. */
+    dotted: Boolean = false,
 ) {
     var dragFraction by remember { mutableStateOf<Float?>(null) }
     // Where the finger let go (or tapped), held until the player has got there: the seek takes
@@ -1135,7 +1137,7 @@ fun SeekBar(
                 // Under the wave, the straight track starts where the played part ends: drawn the
                 // whole way along, it showed as a flat line behind the wave.
                 val trackFrom = if (amplitude > 0f && sweep == null) (size.width * f + h * 1.5f * amplitude).coerceAtMost(size.width) else 0f
-                if (trackFrom < size.width) drawRoundRect(inactive, Offset(trackFrom, y), Size(size.width - trackFrom, h), r)
+                if (!dotted && trackFrom < size.width) drawRoundRect(inactive, Offset(trackFrom, y), Size(size.width - trackFrom, h), r)
                 if (sweep != null) {
                     val at = sweep.value * size.width
                     val band = size.width * 0.25f
@@ -1146,6 +1148,24 @@ fun SeekBar(
                     return@Canvas
                 }
                 val bufferedTo = size.width * maxOf(b, f)
+                if (dotted) {
+                    // A row of dots, evenly spaced from end to end: played ones lit in the
+                    // accent and a little larger, loaded ones brighter than those still to load.
+                    val gap = 7.dp.toPx()
+                    val count = (size.width / gap).toInt().coerceAtLeast(2)
+                    val step = size.width / count
+                    val small = (h * 0.42f).coerceAtLeast(1.4.dp.toPx())
+                    val big = small * 1.45f
+                    for (i in 0..count) {
+                        val x = i * step
+                        val at = Offset(x, size.height / 2)
+                        when {
+                            x <= size.width * f -> drawCircle(if (gradient) androidx.compose.ui.graphics.lerp(active, gradientEnd, x / size.width) else active, big, at)
+                            x <= bufferedTo -> drawCircle(bufferedColor, small, at)
+                            else -> drawCircle(inactive, small, at)
+                        }
+                    }
+                } else {
                 if (bufferedTo > trackFrom) drawRoundRect(bufferedColor, Offset(trackFrom, y), Size(bufferedTo - trackFrom, h), r)
                 if (amplitude > 0f) {
                     // Played part as a sine wave, a stroke as thick as the track.
@@ -1173,6 +1193,7 @@ fun SeekBar(
                     drawRoundRect(Brush.horizontalGradient(listOf(active, gradientEnd), endX = maxOf(size.width * f, 1f)), Offset(0f, y), Size(size.width * f, h), r)
                 } else {
                     drawRoundRect(active, Offset(0f, y), Size(size.width * f, h), r)
+                }
                 }
                 // A small dot where each part of the song still to come begins. Ones already
                 // played aren't drawn: cut into the played line (the wave above all) they read as breaks.

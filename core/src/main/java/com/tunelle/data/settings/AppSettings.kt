@@ -532,6 +532,8 @@ data class InterfaceSettings(
     val liquidGlass: Boolean = true,
     /** Draw the played part of the seek bar as a moving wave. */
     val wavySeekbar: Boolean = false,
+    /** In the dot-matrix looks, the seek bar drawn as a row of dots that light up as the song plays. */
+    val dotSeekbar: Boolean = true,
     /** How thick the seek bar's track is. */
     val seekbarThickness: SeekbarThickness = SeekbarThickness.REGULAR,
     /** What marks the place on the seek bar. */
@@ -579,7 +581,7 @@ data class InterfaceSettings(
     val lyricsTextScale: Float = 1f,
     val playerStyle: PlayerStyle = PlayerStyle.CLASSIC,
     val dockMotion: DockMotion = DockMotion.MINIMIZE,
-    val controlStyle: ControlStyle = ControlStyle.BLOOM,
+    val controlStyle: ControlStyle = ControlStyle.SIGNAL,
     /** The cover drifts and zooms slowly in the player while a song plays. */
     val movingCover: Boolean = true,
     /** One or two of Home's song and album cards drift and zoom the same way while the page sits still. */
@@ -768,6 +770,7 @@ enum class Recommender(val label: String, val summary: String) {
 /** How the player's back, play/pause and forward buttons look and move. */
 @Serializable
 enum class ControlStyle(val label: String, val summary: String) {
+    SIGNAL("Signal", "An accent play button ringed by dots that light up as the song plays, with crisp outlined skips"),
     BLOOM("Bloom", "Large bare glyphs; a soft light blooms behind each press and play folds into pause"),
     CAPSULE("Capsule", "Play stretches into a wide accent pill while it plays; the skips tilt as you tap"),
     ORBIT("Orbit", "Play sits inside the song's progress ring, with a comet of light circling while it plays"),
