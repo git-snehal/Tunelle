@@ -1245,9 +1245,30 @@ fun PlayerLayout(
                                 animate = !state.ui.reduceAnimation && state.loadingMessage?.startsWith("Offline") != true,
                                 progress = { if (state.durationMs > 0) position() / state.durationMs.toFloat() else 0f },
                             )
-                            if (!state.ui.hideVolumeBar && !minimal && roomy) VolumeBar(Modifier.padding(vertical = 4.dp))
-                            Spacer(Modifier.height(10.dp))
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            // Signal: one calm row under the controls, lyrics, your sound, queue; the
+                            // volume keys do volume, and sleep and comments live in the "…" menu.
+                            val signalRow = com.tunelle.ui.theme.LocalDotTitles.current && !apple
+                            if (signalRow) {
+                                Spacer(Modifier.height(14.dp))
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    GlassToggle(PlayerIcons.Lyrics, "Lyrics", pane == Pane.LYRICS, { toggle(Pane.LYRICS) })
+                                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                        androidx.compose.animation.AnimatedContent(pane == Pane.QUEUE, label = "signalRow") { queue ->
+                                            if (queue) ModesPill(state.shuffleMode, state.smartShuffleAvailable, state.repeatMode, actions.toggleShuffle, actions.cycleRepeat, filled = false, enabled = true)
+                                            else com.tunelle.ui.settings.SoundPill(
+                                                onClick = { showOutput = true },
+                                                sleepLabel = sleepLabel,
+                                                onSleep = { showSleep = true },
+                                                modifier = Modifier.padding(horizontal = 10.dp),
+                                            )
+                                        }
+                                    }
+                                    GlassToggle(Icons.AutoMirrored.Rounded.FormatListBulleted, "Queue", pane == Pane.QUEUE, { toggle(Pane.QUEUE) })
+                                }
+                            }
+                            if (!signalRow && !state.ui.hideVolumeBar && !minimal && roomy) VolumeBar(Modifier.padding(vertical = 4.dp))
+                            if (!signalRow) Spacer(Modifier.height(10.dp))
+                            if (!signalRow) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 GlassToggle(PlayerIcons.Lyrics, "Lyrics", pane == Pane.LYRICS, { toggle(Pane.LYRICS) })
                                 // One pill that morphs between sleep and output, and the queue's modes.
                                 val inQueueNow = pane == Pane.QUEUE
@@ -1305,7 +1326,7 @@ fun PlayerLayout(
                                 GlassToggle(Icons.AutoMirrored.Rounded.FormatListBulleted, "Queue", pane == Pane.QUEUE, { toggle(Pane.QUEUE) })
                             }
                             // The device name opens its sound: tap it to tune bass, treble and presets.
-                            if (!minimal && roomy && (sleepLabel != null || !state.ui.hideOutputDevice)) Text(
+                            if (!signalRow && !minimal && roomy && (sleepLabel != null || !state.ui.hideOutputDevice)) Text(
                                 sleepLabel ?: device,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,

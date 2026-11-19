@@ -257,6 +257,11 @@ internal fun MorphBox(
      * flying cover appears only as it shrinks into the header, and goes as it grows.
      */
     bigAlpha: Float = 1f,
+    /**
+     * Through the tunnel (Signal): as the cover grows its top corners round up into
+     * the arch the player's cover stands in, and flatten again as it shrinks away.
+     */
+    arch: Boolean = false,
 ) {
     val big = if (from.width >= to.width) from else to
     val small = if (big === from) to else from
@@ -297,7 +302,29 @@ internal fun MorphBox(
                 scaleX = w / big.width
                 scaleY = lerp(from.height, to.height) / big.height
                 // The corner as it should look on screen, undone by the scale.
-                shape = RoundedCornerShape(lerp(startCorner, endCorner) / scaleX.coerceAtLeast(0.01f))
+                val corner = lerp(startCorner, endCorner)
+                val grown = if (arch) grownAt(t) else 0f
+                shape = if (grown <= 0f) RoundedCornerShape(corner / scaleX.coerceAtLeast(0.01f)) else {
+                    // The top corners swell towards a full half-circle across the cover's width,
+                    // eased so the arch forms late, as the cover nears its place.
+                    val onW = w
+                    val onH = lerp(from.height, to.height)
+                    val eased = grown * grown * (3f - 2f * grown)
+                    val top = corner + (minOf(onW, onH) / 2f - corner) * eased
+                    val sx = scaleX.coerceAtLeast(0.01f)
+                    val sy = scaleY.coerceAtLeast(0.01f)
+                    androidx.compose.foundation.shape.GenericShape { s, _ ->
+                        addRoundRect(
+                            androidx.compose.ui.geometry.RoundRect(
+                                androidx.compose.ui.geometry.Rect(0f, 0f, s.width, s.height),
+                                topLeft = androidx.compose.ui.geometry.CornerRadius(top / sx, top / sy),
+                                topRight = androidx.compose.ui.geometry.CornerRadius(top / sx, top / sy),
+                                bottomRight = androidx.compose.ui.geometry.CornerRadius(corner / sx, corner / sy),
+                                bottomLeft = androidx.compose.ui.geometry.CornerRadius(corner / sx, corner / sy),
+                            ),
+                        )
+                    }
+                }
                 clip = true
                 // Deepest at full size, none on the small cover.
                 shadowElevation = if (fullBleed || bigAlpha < 1f) 0f else shadowPx * grownAt(t)
@@ -385,7 +412,11 @@ fun CoverMorph(url: String?, smallUrl: String? = null) {
     }
     // The player cover's own corner, as set in Appearance (the full-screen cover keeps the usual one).
     val ui by com.tunelle.data.settings.AppSettings.ui.collectAsState()
-    val coverCorner = if (ui.fullScreenCover) 28f else ui.coverCornerDp.toFloat()
+    // Signal's arched cover: the flight rounds up into the arch (and lands on its 18dp feet).
+    val archMorph = com.tunelle.ui.theme.LocalDotTitles.current && !ui.fullScreenCover &&
+        config.orientation != android.content.res.Configuration.ORIENTATION_LANDSCAPE &&
+        (ui.playerStyle == com.tunelle.data.settings.PlayerStyle.CLASSIC || ui.playerStyle == com.tunelle.data.settings.PlayerStyle.MINIMAL)
+    val coverCorner = if (archMorph) 18f else if (ui.fullScreenCover) 28f else ui.coverCornerDp.toFloat()
     fun roundStart(from: Rect) = if (PlayerMorph.round()) with(density) { from.width.toDp().value / 2f } else 12f
     // Only whether a finger is on it decides what's drawn; how far it has gone
     // is read in the layer alone, so a swipe doesn't recompose this every frame.
@@ -402,22 +433,22 @@ fun CoverMorph(url: String?, smallUrl: String? = null) {
         PlayerMorph.expanding -> {
             val from = PlayerMorph.openFrom() ?: return
             val to = (PlayerMorph.playerCover ?: PlayerMorph.lastPlayerCover)?.let(PlayerMorph::scaled) ?: guess
-            MorphBox(url, smallUrl, from, to, if (sheet != null) ({ sheet().coerceIn(0f, 1f) }) else ({ openT.value }), startCornerDp = roundStart(from), endCornerDp = coverCorner)
+            MorphBox(url, smallUrl, from, to, if (sheet != null) ({ sheet().coerceIn(0f, 1f) }) else ({ openT.value }), startCornerDp = roundStart(from), endCornerDp = coverCorner, arch = archMorph)
         }
         PlayerMorph.collapsing -> {
             val from = PlayerMorph.closeFrom() ?: return
             val to = PlayerMorph.miniCover ?: return
-            MorphBox(url, smallUrl, from, to, if (sheet != null) ({ 1f - sheet().coerceIn(0f, 1f) }) else ({ closeT.value }), startCornerDp = coverCorner, endCornerDp = 12f)
+            MorphBox(url, smallUrl, from, to, if (sheet != null) ({ 1f - sheet().coerceIn(0f, 1f) }) else ({ closeT.value }), startCornerDp = coverCorner, endCornerDp = 12f, arch = archMorph)
         }
         pulled -> {
             val from = PlayerMorph.miniCover ?: return
             val to = PlayerMorph.lastPlayerCover?.let(PlayerMorph::scaled) ?: guess
-            MorphBox(url, smallUrl, from, to, { PlayerMorph.pulling }, startCornerDp = roundStart(from), endCornerDp = coverCorner)
+            MorphBox(url, smallUrl, from, to, { PlayerMorph.pulling }, startCornerDp = roundStart(from), endCornerDp = coverCorner, arch = archMorph)
         }
         dragged -> {
             val from = PlayerMorph.dragRest() ?: return
             val to = PlayerMorph.miniCover ?: return
-            MorphBox(url, smallUrl, from, to, { PlayerMorph.dragging }, startCornerDp = coverCorner, endCornerDp = 12f)
+            MorphBox(url, smallUrl, from, to, { PlayerMorph.dragging }, startCornerDp = coverCorner, endCornerDp = 12f, arch = archMorph)
         }
     }
 }

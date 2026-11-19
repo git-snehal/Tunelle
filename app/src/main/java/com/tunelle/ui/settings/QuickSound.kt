@@ -134,3 +134,46 @@ private fun ToneSlider(label: String, value: Float, onChange: (Float) -> Unit) {
         )
     }
 }
+
+/** "Studio", "Bass +4", "Equalizer off": a few words for how the sound is tuned now. */
+@Composable
+fun soundSummary(): String {
+    val eq by AppSettings.equalizer.collectAsState()
+    if (!eq.enabled) return com.tunelle.i18n.Tr.t("Equalizer off")
+    EqPreset.entries.firstOrNull { it.bands == eq.bands && eq.bassDb == 0f && eq.trebleDb == 0f }?.let { return com.tunelle.i18n.Tr.t(it.label) }
+    fun db(v: Float) = (if (v > 0) "+" else "") + "%.1f".format(v).removeSuffix(".0")
+    return buildList {
+        if (eq.bassDb != 0f) add(com.tunelle.i18n.Tr.f("Bass {0}", db(eq.bassDb)))
+        if (eq.trebleDb != 0f) add(com.tunelle.i18n.Tr.f("Treble {0}", db(eq.trebleDb)))
+    }.joinToString(" ").ifEmpty { com.tunelle.i18n.Tr.t("Custom sound") }
+}
+
+/**
+ * The player's sound pill in the Signal look: your sound's shape, where it's
+ * playing and how it's tuned ("AirBass · Studio"). A tap opens Output and sound.
+ * A running sleep timer takes its place, so the time left stays in view.
+ */
+@Composable
+fun SoundPill(onClick: () -> Unit, sleepLabel: String? = null, onSleep: () -> Unit = {}, modifier: Modifier = Modifier) {
+    val device by DeviceSound.current.collectAsState()
+    val summary = soundSummary()
+    Row(
+        modifier
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            .clickable(role = Role.Button, onClickLabel = com.tunelle.i18n.Tr.t("Tune the sound"), onClick = if (sleepLabel != null) onSleep else onClick)
+            .padding(start = 8.dp, end = 14.dp, top = 7.dp, bottom = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        com.tunelle.ui.components.SoundShape(Modifier.size(22.dp), ink = MaterialTheme.colorScheme.onSurface)
+        Spacer(Modifier.width(8.dp))
+        Text(sleepLabel ?: device.name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        if (sleepLabel == null) Text(
+            "  ·  $summary",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+    }
+}
