@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tunnel note: a music note at the end of the tunnel. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFF4F4F5" android:pathData="M25.50,80.70 V54.00 A28.50,28.50 0 0 1 82.50,54.00 V80.70 A2.10,2.10 0 0 1 78.30,80.70 V54.00 A24.30,24.30 0 0 0 29.70,54.00 V80.70 A2.10,2.10 0 0 1 25.50,80.70 Z" />
+    <path android:fillColor="#FFF4F4F5" android:fillAlpha="0.55" android:pathData="M35.10,80.70 V54.00 A18.90,18.90 0 0 1 72.90,54.00 V80.70 A2.10,2.10 0 0 1 68.70,80.70 V54.00 A14.70,14.70 0 0 0 39.30,54.00 V80.70 A2.10,2.10 0 0 1 35.10,80.70 Z" />
+    <path android:fillColor="#FFFF5A36" android:pathData="M55.46,72.15 A5.70,4.44 -20 1 1 44.74,76.05 A5.70,4.44 -20 1 1 55.46,72.15 Z M54.00,53.10 H56.52 V73.50 H54.00 Z M54.00,51.90 L56.40,51.90 Q63.90,54.90 63.90,63.90 L61.50,63.90 Q60.90,56.70 54.00,54.30 Z" />
+</vector>

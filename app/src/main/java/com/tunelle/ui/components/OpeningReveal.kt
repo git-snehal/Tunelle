@@ -2,6 +2,7 @@ package com.tunelle.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,46 +14,53 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import kotlin.math.exp
 import kotlin.math.ln
-import kotlinx.coroutines.delay
 
 /** Plays once per launch of the app, not each time the screen is rebuilt. */
 object Opening {
     var played = false
 }
 
-/** The splash's black, which the system splash screen and the icon use too. */
-val OPENING_FIELD = Color.Black
+/** The splash's near-black, which the system splash screen and the icon use too. */
+val OPENING_FIELD = Color(0xFF0B0B0C)
+
+private val ARCH = Color(0xFFF4F4F5)
 
 /**
- * The opening: the mark takes over from the system splash at the same
- * size, settles with a glint of light across it, then the screen dives into
- * it. The white mark turns into a window onto the app, outlined in white,
- * and rushes toward you until the app fills the screen, as if flying
- * through the logo. [onDive] reports the dive, 0 to 1, so the app behind can come
- * forward as it's revealed; [onDone] removes this.
+ * The opening, telling the story in the name: sound through a tunnel becomes music.
+ *
+ * Echo takes over from the system splash at the same size. Its arches ripple
+ * out one after another from the middle, the ember point inside grows into a
+ * music note, and then the screen flies through the tunnel's opening, which
+ * becomes a window onto the app as it rushes toward you. [onDive] reports the
+ * dive, 0 to 1, so the app behind can come forward; [onDone] removes this.
  */
 @Composable
 fun OpeningReveal(onDive: (Float) -> Unit, onDone: () -> Unit) {
-    val mark = remember { markPath() }
-    val settle = remember { Animatable(0f) }
+    val outer = remember { echoPath(ECHO_OUTER) }
+    val middle = remember { echoPath(ECHO_MIDDLE) }
+    val inner = remember { echoPath(ECHO_INNER) }
+    val dot = remember { echoPath(ECHO_DOT) }
+    val note = remember { echoPath(ECHO_NOTE) }
+    val hole = remember { echoPath(ECHO_HOLE) }
+    val ripple = remember { Animatable(0f) }
+    val sing = remember { Animatable(0f) }
     val dive = remember { Animatable(0f) }
     val done by rememberUpdatedState(onDone)
     val report by rememberUpdatedState(onDive)
     LaunchedEffect(Unit) {
-        settle.animateTo(1f, tween(SETTLE_MS, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
-        delay(HOLD_MS)
-        // Slow to start and then rushing, like falling in.
+        ripple.animateTo(1f, tween(RIPPLE_MS, easing = LinearEasing))
+        sing.animateTo(1f, tween(SING_MS, easing = CubicBezierEasing(0.3f, 1.4f, 0.5f, 1f)))
+        kotlinx.coroutines.delay(HOLD_MS)
+        // Slow to start and then rushing, like being pulled into the tunnel.
         dive.animateTo(1f, tween(DIVE_MS, easing = CubicBezierEasing(0.6f, 0f, 0.85f, 0.35f))) { report(value) }
         report(1f)
         done()
@@ -60,44 +68,50 @@ fun OpeningReveal(onDive: (Float) -> Unit, onDone: () -> Unit) {
     Canvas(
         Modifier
             .fillMaxSize()
-            // Its own layer, so the window cut through it shows the app below.
+            // Its own layer, so the opening cut through it shows the app below.
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
     ) {
+        val r = ripple.value
+        val n = sing.value
         val d = dive.value
-        val st = settle.value
         // The system splash draws the 108-unit icon 240dp across; start exactly there.
         val base = 240.dp.toPx() / MARK_VIEWPORT
-        val breathe = 1f + 0.05f * kotlin.math.sin(Math.PI.toFloat() * st)
-        val s = base * breathe * exp(ln(ZOOM) * d * d)
-        val window = smooth(0.04f, 0.28f, d)
-        val fade = 1f - smooth(0.8f, 1f, d)
+        val s = base * exp(ln(ZOOM) * d * d)
+        val fade = 1f - smooth(0.75f, 1f, d)
+        // Zoom toward the middle of the tunnel's opening, so it's what fills the screen.
+        val pivot = Offset(54f, 66f)
 
         drawRect(OPENING_FIELD, alpha = fade)
-        // A white rim that stays the same width on screen however big the mark gets.
-        val rim = Stroke(width = RIM.toPx() / s, join = StrokeJoin.Round)
-        translate(center.x - MARK_VIEWPORT / 2f * s, center.y - MARK_VIEWPORT / 2f * s) {
+        translate(center.x - pivot.x * s, center.y - pivot.y * s) {
             scale(s, s, pivot = Offset.Zero) {
-                drawPath(mark, Color.White, alpha = 1f - window)
-                // A band of light that runs across the mark once as it settles.
-                if (st in 0.05f..0.98f && d == 0f) {
-                    val x = -30f + 170f * st
-                    drawPath(
-                        mark,
-                        Brush.linearGradient(
-                            listOf(Color(0x00DADADA), Color(0xFFDADADA).copy(alpha = 0.9f), Color(0x00DADADA)),
-                            start = Offset(x - 18f, 30f),
-                            end = Offset(x + 18f, 78f),
-                        ),
-                        blendMode = BlendMode.SrcAtop,
-                    )
+                // Each arch rises in a moment after the one inside it, like a ring of sound.
+                arch(inner, smooth(0.00f, 0.45f, r), 1f, fade)
+                arch(middle, smooth(0.20f, 0.70f, r), 0.75f, fade)
+                arch(outer, smooth(0.40f, 0.95f, r), 0.45f, fade)
+                // The point of light (there from the start, as on the icon), then the note it becomes.
+                val point = 1f - n.coerceIn(0f, 1f)
+                if (point > 0f) scale(0.6f + 0.4f * point, pivot = Offset(54f, 73.5f)) {
+                    drawPath(dot, EMBER, alpha = point * fade)
                 }
-                // Then the mark becomes a window onto the app.
-                if (window > 0f) drawPath(mark, Color.Black, alpha = window, blendMode = BlendMode.DstOut)
-                // Its white edge outlines the window, so the way in shows even when the
-                // app behind is as dark as the field around it.
-                if (fade > 0f) drawPath(mark, Color.White, alpha = fade, style = rim)
+                if (n > 0f) scale(0.4f + 0.6f * n, pivot = Offset(54f, 70f)) {
+                    drawPath(note, EMBER, alpha = n.coerceIn(0f, 1f) * fade)
+                }
+                // Then the opening becomes a window onto the app.
+                val window = smooth(0.02f, 0.2f, d)
+                if (window > 0f) drawPath(hole, Color.Black, alpha = window, blendMode = BlendMode.DstOut)
             }
         }
+    }
+}
+
+/**
+ * One arch. It starts exactly as the system splash drew it, so nothing jumps;
+ * as the ripple passes through it swells outward and brightens, then settles.
+ */
+private fun DrawScope.arch(path: androidx.compose.ui.graphics.Path, t: Float, alpha: Float, fade: Float) {
+    val pulse = kotlin.math.sin(Math.PI.toFloat() * t)
+    scale(1f + 0.07f * pulse, pivot = Offset(54f, 80f)) {
+        drawPath(path, ARCH, alpha = (alpha + (1f - alpha) * pulse) * fade)
     }
 }
 
@@ -106,10 +120,9 @@ private fun smooth(from: Float, to: Float, x: Float): Float {
     return t * t * (3f - 2f * t)
 }
 
-/** The width of the white edge around the mark. */
-private val RIM = 2.5.dp
-private const val SETTLE_MS = 620
-private const val HOLD_MS = 120L
-private const val DIVE_MS = 900
-/** How many times its size the mark grows to by the end of the dive, enough for its band to fill the screen. */
-private const val ZOOM = 90f
+private const val RIPPLE_MS = 700
+private const val SING_MS = 380
+private const val HOLD_MS = 160L
+private const val DIVE_MS = 850
+/** How many times its size the mark grows to, enough for the tunnel's opening to fill the screen. */
+private const val ZOOM = 60f

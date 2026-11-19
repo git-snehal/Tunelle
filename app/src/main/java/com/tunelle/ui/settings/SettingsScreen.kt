@@ -1198,7 +1198,7 @@ private fun settingsSections(
                     NavRow("App language", { languageDialog = true }, icon = Icons.Rounded.Language,
                         value = com.tunelle.ui.theme.AppLanguages.selected(context).label)
                 },
-                Entry("App icon", "launcher icon design glass pearl midnight rose ocean") {
+                Entry("App icon", "launcher icon logo design echo tunnel note paper cream ember") {
                     NavRow("App icon", { appIconDialog = true }, summary = "Choose the Tunelle icon on your home screen", icon = Icons.Rounded.Palette)
                 },
                 Entry("Fonts & readability", "font typeface text weight bold thin ttf otf import custom") {

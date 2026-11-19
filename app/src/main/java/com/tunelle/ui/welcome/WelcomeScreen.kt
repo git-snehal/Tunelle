@@ -133,7 +133,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** The welcome's steps, in order. */
-internal enum class WelcomeStep { ARTISTS, LOOK, SIGN_IN }
+internal enum class WelcomeStep { LANGUAGES, ARTISTS, LOOK, SIGN_IN }
 
 /** Done needs this many picks; with none, the step can only be skipped. */
 internal const val MIN_PICKS = 1
@@ -157,7 +157,7 @@ fun WelcomeScreen(
 ) {
     val ui by AppSettings.ui.collectAsState()
     val context = LocalContext.current
-    var step by rememberSaveable { mutableStateOf(WelcomeStep.ARTISTS) }
+    var step by rememberSaveable { mutableStateOf(WelcomeStep.LANGUAGES) }
     val picks = rememberSaveable(saver = ArtistListSaver) { mutableStateListOf() }
     // The artists on offer, grown by the picks; kept here so going back to the step finds it as it was.
     val grid = rememberSaveable(saver = ArtistListSaver) { mutableStateListOf() }
@@ -189,10 +189,20 @@ fun WelcomeScreen(
         }
     }
     var country by rememberSaveable { mutableStateOf<String?>(null) }
+    // The languages picked on the first step; the artist grid starts from them.
+    val languages = rememberSaveable(saver = idSetSaver) {
+        mutableStateListOf<String>().apply { addAll(AppSettings.library.value.musicLanguages) }
+    }
+    // The languages the grid was last filled from, so changing them refills it.
+    var gridLanguages by rememberSaveable { mutableStateOf("") }
     val popular: suspend () -> List<ExploreFeed.Artist> = loadPopular ?: {
-        val found = com.tunelle.data.UserCountry.detect(context)
-        country = found
-        MusicRepository.chartArtists(found)
+        val chosen = languages.mapNotNull(com.tunelle.data.MusicLanguage::of)
+        val byLanguage = if (chosen.isEmpty()) emptyList() else com.tunelle.data.MusicLanguage.artists(chosen)
+        if (byLanguage.isNotEmpty()) byLanguage else {
+            val found = com.tunelle.data.UserCountry.detect(context)
+            country = found
+            MusicRepository.chartArtists(found)
+        }
     }
 
     fun finish() {
@@ -219,7 +229,7 @@ fun WelcomeScreen(
         }
     }
 
-    BackHandler(enabled = signingIn || step != WelcomeStep.ARTISTS) {
+    BackHandler(enabled = signingIn || step != WelcomeStep.LANGUAGES) {
         if (signingIn) signingIn = false else step = WelcomeStep.entries[step.ordinal - 1]
     }
 
@@ -243,14 +253,28 @@ fun WelcomeScreen(
                 WelcomeTopBar(
                     step = step,
                     onBack = { step = WelcomeStep.entries[step.ordinal - 1] },
-                    onSkip = { step = WelcomeStep.LOOK },
+                    onSkip = { step = if (step == WelcomeStep.LANGUAGES) WelcomeStep.ARTISTS else WelcomeStep.LOOK },
                     reduceMotion = ui.reduceAnimation,
                 )
                 WelcomeBottomBar(
                     step = step,
                     picks = picks,
+                    languages = languages,
                     onContinue = {
                         when (step) {
+                            WelcomeStep.LANGUAGES -> {
+                                val chosen = languages.toList()
+                                AppSettings.updateLibrary { it.copy(musicLanguages = chosen) }
+                                // New languages, new artists: the grid fills again from them, keeping any picks.
+                                val key = chosen.joinToString(",")
+                                if (key != gridLanguages) {
+                                    gridLanguages = key
+                                    grid.clear()
+                                    grown.clear()
+                                    broughtBy.clear()
+                                }
+                                step = WelcomeStep.ARTISTS
+                            }
                             WelcomeStep.ARTISTS -> { follow(); step = WelcomeStep.LOOK }
                             WelcomeStep.LOOK -> step = WelcomeStep.SIGN_IN
                             WelcomeStep.SIGN_IN -> if (AccountStore.signedIn.value) finish() else signingIn = true
@@ -270,6 +294,7 @@ fun WelcomeScreen(
                 label = "welcomeStep",
             ) { s ->
                 when (s) {
+                    WelcomeStep.LANGUAGES -> LanguagesStep(languages)
                     WelcomeStep.ARTISTS -> ArtistsStep(
                         picks = picks,
                         grid = grid,
@@ -279,6 +304,7 @@ fun WelcomeScreen(
                         loadPopular = popular,
                         ready = locationAnswered,
                         country = country,
+                        languages = languages.mapNotNull(com.tunelle.data.MusicLanguage::of),
                         onPicked = { artist ->
                             if (artist.browseId !in grown) {
                                 grown += artist.browseId
@@ -329,11 +355,11 @@ private fun BoxScope.WelcomeTopBar(step: WelcomeStep, onBack: () -> Unit, onSkip
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .height(56.dp),
     ) {
-        AnimatedVisibility(step != WelcomeStep.ARTISTS, Modifier.align(Alignment.CenterStart), enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(step != WelcomeStep.LANGUAGES, Modifier.align(Alignment.CenterStart), enter = fadeIn(), exit = fadeOut()) {
             GlassBackButton(onBack)
         }
         StepDots(step, reduceMotion, Modifier.align(Alignment.Center))
-        AnimatedVisibility(step == WelcomeStep.ARTISTS, Modifier.align(Alignment.CenterEnd), enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(step == WelcomeStep.ARTISTS || step == WelcomeStep.LANGUAGES, Modifier.align(Alignment.CenterEnd), enter = fadeIn(), exit = fadeOut()) {
             Surface(
                 onClick = onSkip,
                 shape = CircleShape,
@@ -372,7 +398,7 @@ private fun StepDots(step: WelcomeStep, reduceMotion: Boolean, modifier: Modifie
 }
 
 @Composable
-private fun BoxScope.WelcomeBottomBar(step: WelcomeStep, picks: List<ExploreFeed.Artist>, onContinue: () -> Unit, onNotNow: () -> Unit) {
+private fun BoxScope.WelcomeBottomBar(step: WelcomeStep, picks: List<ExploreFeed.Artist>, languages: List<String>, onContinue: () -> Unit, onNotNow: () -> Unit) {
     val picked = picks.size
     val signedIn by AccountStore.signedIn.collectAsState()
     val page = MaterialTheme.colorScheme.background
@@ -385,6 +411,14 @@ private fun BoxScope.WelcomeBottomBar(step: WelcomeStep, picks: List<ExploreFeed
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val label = when (step) {
+            WelcomeStep.LANGUAGES -> {
+                val names = languages.mapNotNull { com.tunelle.data.MusicLanguage.of(it)?.label?.let(com.tunelle.i18n.Tr::t) }
+                when {
+                    names.isEmpty() -> "Show me what's popular"
+                    names.size <= 2 -> com.tunelle.i18n.Tr.f("Continue · {0}", names.joinToString(" + "))
+                    else -> com.tunelle.i18n.Tr.f("Continue · {0} languages", names.size)
+                }
+            }
             WelcomeStep.ARTISTS -> when {
                 picked < MIN_PICKS -> "Pick an artist to start"
                 picked == 1 -> "Done · 1 artist"
@@ -425,7 +459,64 @@ private fun topInset() = WindowInsets.statusBars.asPaddingValues().calculateTopP
 @Composable
 private fun bottomInset() = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BOTTOM_BAR
 
-// ---- Step 1: artists ------------------------------------------------------
+// ---- Step 1: languages ----------------------------------------------------
+
+/**
+ * The languages the listener's music is in, as cards in their own script. The
+ * order they're tapped in is kept: the first one leads the artists that follow.
+ */
+@Composable
+private fun LanguagesStep(chosen: SnapshotStateList<String>) {
+    val haptics = rememberHaptics()
+    Column(Modifier.fillMaxSize()) {
+        Spacer(Modifier.height(topInset()))
+        StepTitle("What do you listen to?", "Pick the languages your music is in. We'll start with artists who sing in them.")
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(150.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomInset() + 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(com.tunelle.data.MusicLanguage.entries.size) { i ->
+                val lang = com.tunelle.data.MusicLanguage.entries[i]
+                val order = chosen.indexOf(lang.name)
+                val selected = order >= 0
+                val bg by animateColorAsState(
+                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh, label = "langBg",
+                )
+                val fg by animateColorAsState(
+                    if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, label = "langFg",
+                )
+                Box(
+                    Modifier.fillMaxWidth().height(84.dp)
+                        .clip(MaterialTheme.shapes.large)
+                        .background(bg)
+                        .clickable {
+                            haptics.tick()
+                            if (selected) chosen.remove(lang.name) else chosen.add(lang.name)
+                        }
+                        .semantics { this.selected = selected; contentDescription = lang.label }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Column(Modifier.align(Alignment.BottomStart)) {
+                        Text(lang.native, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = fg, maxLines = 1)
+                        if (lang.native != lang.label) {
+                            Text(lang.label, style = MaterialTheme.typography.bodySmall, color = fg.copy(alpha = 0.75f), maxLines = 1)
+                        }
+                    }
+                    // The order it was picked in: the first language leads.
+                    if (selected) Box(
+                        Modifier.align(Alignment.TopEnd).size(24.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onPrimary),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("${order + 1}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
+    }
+}
+
+// ---- Step 2: artists ------------------------------------------------------
 
 @Composable
 private fun ArtistsStep(
@@ -439,6 +530,8 @@ private fun ArtistsStep(
     ready: Boolean,
     /** The country the grid came from, named under the title once known. */
     country: String?,
+    /** The languages picked on the step before, which the grid starts from. */
+    languages: List<com.tunelle.data.MusicLanguage>,
     onPicked: (ExploreFeed.Artist) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -490,9 +583,15 @@ private fun ArtistsStep(
     Column(Modifier.fillMaxSize().imePadding()) {
         Spacer(Modifier.height(topInset()))
         val place = country?.let { runCatching { Locale.Builder().setRegion(it).build().displayCountry }.getOrNull()?.takeIf(String::isNotBlank) }
+        val sung = languages.map { com.tunelle.i18n.Tr.t(it.label) }
         StepTitle(
             "Pick artists you like",
-            (if (place != null) com.tunelle.i18n.Tr.f("Starting with what's popular in {0}. ", place) else "") +
+            when {
+                sung.size == 1 -> com.tunelle.i18n.Tr.f("Starting with artists who sing in {0}. ", sung[0])
+                sung.size > 1 -> com.tunelle.i18n.Tr.f("Starting with artists who sing in {0} and {1}. ", sung.dropLast(1).joinToString(", "), sung.last())
+                place != null -> com.tunelle.i18n.Tr.f("Starting with what's popular in {0}. ", place)
+                else -> ""
+            } +
                 "Each one you pick brings in more like them. Keep going as long as you like, then tap Done.",
         )
         TextField(
@@ -670,7 +769,7 @@ private fun ArtistPlaceholder() {
     }
 }
 
-// ---- Step 2: look ---------------------------------------------------------
+// ---- Step 3: look ---------------------------------------------------------
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -825,7 +924,7 @@ internal fun LookPreview(picks: List<ExploreFeed.Artist>, modifier: Modifier = M
     }
 }
 
-// ---- Step 3: sign in ------------------------------------------------------
+// ---- Step 4: sign in ------------------------------------------------------
 
 @Composable
 private fun SignInStep() {

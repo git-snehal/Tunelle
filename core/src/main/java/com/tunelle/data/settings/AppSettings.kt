@@ -723,6 +723,8 @@ enum class LyricsAlign(val label: String) {
 
 @Serializable
 data class LibrarySettings(
+    /** The languages picked on the welcome, by [com.tunelle.data.MusicLanguage] name, most important first. */
+    val musicLanguages: List<String> = emptyList(),
     /** A MediaStore relative path ("Music/"), or null for every folder. */
     val localFolder: String? = null,
     val filterNonMusic: Boolean = true,
