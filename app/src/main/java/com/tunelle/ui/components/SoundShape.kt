@@ -29,8 +29,9 @@ fun SoundShape(modifier: Modifier = Modifier, ink: Color, pulse: () -> Float = {
     // Bass counts the tone control, the lowest bands and bass boost; treble the tone control and the top bands.
     val bassDb = if (on) eq.bassDb + eq.bands.take(4).average().toFloat() + boost.bassBoost / 160f else 0f
     val trebleDb = if (on) eq.trebleDb + eq.bands.takeLast(4).average().toFloat() else 0f
-    val bass by animateFloatAsState((bassDb / 12f).coerceIn(-1f, 1f), spring(dampingRatio = 0.6f, stiffness = 220f), label = "shapeBass")
-    val treble by animateFloatAsState((trebleDb / 12f).coerceIn(-1f, 1f), spring(dampingRatio = 0.6f, stiffness = 220f), label = "shapeTreble")
+    // Full effect by 6 dB: the presets move a few dB, and the shape should show it at a glance.
+    val bass by animateFloatAsState((bassDb / 6f).coerceIn(-1f, 1f), spring(dampingRatio = 0.6f, stiffness = 220f), label = "shapeBass")
+    val treble by animateFloatAsState((trebleDb / 6f).coerceIn(-1f, 1f), spring(dampingRatio = 0.6f, stiffness = 220f), label = "shapeTreble")
     Canvas(modifier) {
         val w = size.width
         val h = size.height
@@ -38,9 +39,9 @@ fun SoundShape(modifier: Modifier = Modifier, ink: Color, pulse: () -> Float = {
         val unit = w / 24f
         // Three arches standing on the foot, the outer ones widening a little with the pulse.
         listOf(
-            Triple(0.46f, (1.1f + treble * 0.7f).coerceAtLeast(0.5f), (0.45f + treble * 0.35f).coerceIn(0.15f, 1f)),
-            Triple(0.33f, (1.5f + treble * 0.4f + bass * 0.3f).coerceAtLeast(0.6f), (0.75f + treble * 0.2f).coerceIn(0.3f, 1f)),
-            Triple(0.20f, (2.0f + bass * 1.4f).coerceAtLeast(0.8f), 1f),
+            Triple(0.46f, (1.1f + treble * 1.1f).coerceAtLeast(0.5f), (0.4f + treble * 0.55f).coerceIn(0.12f, 1f)),
+            Triple(0.33f, (1.5f + treble * 0.6f + bass * 0.5f).coerceAtLeast(0.6f), (0.7f + treble * 0.3f).coerceIn(0.3f, 1f)),
+            Triple(0.20f, (2.0f + bass * 2.4f).coerceAtLeast(0.8f), 1f),
         ).forEachIndexed { i, (radius, width, alpha) ->
             val r = w * radius * (1f + p * 0.18f * (i + 1) / 3f)
             val cx = w / 2f

@@ -168,12 +168,15 @@ fun SoundPill(onClick: () -> Unit, sleepLabel: String? = null, onSleep: () -> Un
         com.tunelle.ui.components.SoundShape(Modifier.size(22.dp), ink = MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.width(8.dp))
         Text(sleepLabel ?: device.name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if (sleepLabel == null) Text(
             "  ·  $summary",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
+            // The device's name comes first; how it's tuned gives way when there isn't room.
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
     }
 }
