@@ -1299,12 +1299,16 @@ fun PlayerLayout(
                                 )
                                 GlassToggle(Icons.AutoMirrored.Rounded.FormatListBulleted, "Queue", pane == Pane.QUEUE, { toggle(Pane.QUEUE) })
                             }
+                            // The device name opens its sound: tap it to tune bass, treble and presets.
                             if (!minimal && roomy && (sleepLabel != null || !state.ui.hideOutputDevice)) Text(
                                 sleepLabel ?: device,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp)
+                                    .clip(CircleShape)
+                                    .clickable(onClickLabel = com.tunelle.i18n.Tr.t("Sound for this device")) { if (sleepLabel != null) showSleep = true else showOutput = true }
+                                    .padding(vertical = 6.dp),
                             )
                         }
                     }
@@ -1437,6 +1441,7 @@ fun PlayerLayout(
             onDismiss = { showOutput = false },
             onCast = { showOutput = false; showCast = true },
             onPipeline = { showOutput = false; showSignal = true },
+            onEqualizer = { showOutput = false; actions.openEqualizer() },
         )
         if (showCast) com.tunelle.ui.cast.CastSheet(onDismiss = { showCast = false })
         if (showSleep) SleepTimerDialog(onDismiss = { showSleep = false })
