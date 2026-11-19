@@ -1033,6 +1033,17 @@ private fun settingsSections(
                 Entry("Spatial audio", "stereo widen immersive") {
                     ToggleRow("Spatial audio", pb.spatialAudio, { v -> AppSettings.updatePlayback { it.copy(spatialAudio = v) } }, summary = "Widens stereo tracks for a more open sound", icon = Icons.Rounded.SurroundSound, beta = true)
                 },
+                Entry("Sound per device", "sound per device headphones earbuds speaker bluetooth wired usb bass treble tune equalizer") {
+                    val device by com.tunelle.data.devicesound.DeviceSound.current.collectAsState()
+                    val perDevice by com.tunelle.data.devicesound.DeviceSound.enabled.collectAsState()
+                    NavRow(
+                        "Sound per device",
+                        onOpenEqualizer,
+                        summary = if (perDevice) com.tunelle.i18n.Tr.f("Bass, treble and EQ for each speaker and pair of headphones · now {0}", device.name)
+                        else "Off: one sound for every speaker and pair of headphones",
+                        icon = device.kind.icon(),
+                    )
+                },
                 Entry("Equalizer", "eq bands tone balance bass treble") {
                     NavRow("Equalizer", onOpenEqualizer, summary = "Fifteen bands, tone and balance", icon = Icons.Rounded.Equalizer)
                 },

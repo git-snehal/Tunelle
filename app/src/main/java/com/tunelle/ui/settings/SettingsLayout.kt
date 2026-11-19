@@ -60,13 +60,14 @@ internal val SETTINGS_CATEGORIES = listOf(
         ),
     ),
     SettingsCategory(
-        "audio", "Sound and quality", "Streaming quality, lossless, loudness, effects and bit-perfect output", Icons.Rounded.GraphicEq,
+        "audio", "Sound and quality", "Sound per device, equalizer, streaming quality, lossless and loudness", Icons.Rounded.GraphicEq,
         listOf(
+            "Your devices" to listOf("Sound per device", "Equalizer"),
             "Streaming quality" to listOf("On Wi-Fi", "On mobile data", "Upgrade quality while playing"),
             "Lossless" to listOf("Lossless streaming", "Audio sources", "Unmetered networks only"),
             "Download quality" to listOf("Download quality", "Download on Wi-Fi only"),
             "Loudness" to listOf("Loudness normalization", "Volume level", "Normalize on the phone speaker"),
-            "Effects" to listOf("Equalizer", "Clarity", "Spatial audio", "System audio effects"),
+            "Effects" to listOf("Clarity", "Spatial audio", "System audio effects"),
             "Output and bit-perfect" to listOf("Bit-perfect output", "Output precision", "Prefer USB DAC"),
         ),
     ),
