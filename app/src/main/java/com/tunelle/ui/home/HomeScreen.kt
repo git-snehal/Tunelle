@@ -820,12 +820,17 @@ internal fun MixesShelf(
     onPlay: () -> Unit = {},
 ) {
     Column(Modifier.padding(top = 18.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 20.dp),
-        )
+        Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            // The same accent point as the other section headers, in the dot-matrix looks.
+            if (com.tunelle.ui.theme.LocalDotTitles.current) {
+                Box(Modifier.padding(end = 10.dp).size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+            }
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            )
+        }
         Text(
             line,
             style = MaterialTheme.typography.bodySmall,

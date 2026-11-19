@@ -1200,9 +1200,15 @@ fun SeekBar(
                 if (durationMs > 0) {
                     val played = size.width * f
                     val clear = maxOf(thumbRadius.toPx(), h) + 2.dp.toPx()
+                    // On the dotted bar a mark lights the dot nearest it, so it stays on the grid.
+                    val grid = if (dotted) size.width / (size.width / 7.dp.toPx()).toInt().coerceAtLeast(2) else 0f
                     shownMarks.forEach { ms ->
-                        val x = size.width * (ms.toFloat() / durationMs)
-                        if (x > played + clear && x < size.width - h) drawCircle(markDot, h * 0.32f, Offset(x, size.height / 2))
+                        val raw = size.width * (ms.toFloat() / durationMs)
+                        val x = if (dotted) kotlin.math.round(raw / grid) * grid else raw
+                        if (x > played + clear && x < size.width - h) {
+                            if (dotted) drawCircle(markDot, (h * 0.42f).coerceAtLeast(1.4.dp.toPx()) * 1.45f, Offset(x, size.height / 2))
+                            else drawCircle(markDot, h * 0.32f, Offset(x, size.height / 2))
+                        }
                     }
                 }
                 if (thumbRadius > 0.dp) {
